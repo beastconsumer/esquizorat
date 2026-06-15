@@ -1,7 +1,0 @@
-{ 
-  "panel_url": "http://SEU_IP:5000",
-  "api": { 
-    "api_key": "" 
-  }, 
-  "features": {} 
-} 
