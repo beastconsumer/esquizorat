@@ -1,0 +1,112 @@
+# FLUXO COMPLETO DO PROJETO RAT
+
+## 1. COMPILACAO (builder2.py)
+Program.py + central_client.py → PyInstaller → RAT.exe (80.8 MB)
+
+## 2. DISTRIBUICAO
+- Copiar RAT.exe para PC remoto
+- Executar RAT.exe
+
+## 3. EXECUCAO NO PC REMOTO (RAT.exe)
+├─ Verifica privilegios admin
+├─ Se nao for admin: elevate() → solicita UAC
+├─ Se for admin: setup_advanced_persistence()
+│  ├─ disable_windows_defender()
+│  │  ├─ Desabilita monitoramento em tempo real
+│  │  ├─ Desabilita comportamentos suspeitos
+│  │  ├─ Desabilita deteccao em primeira vista
+│  │  ├─ Desabilita IO protection
+│  │  ├─ Desabilita script scanning
+│  │  ├─ Para servico WinDefend
+│  │  └─ Outras 5 disable commands
+│  ├─ Copia ocultas do RAT em 4 locacoes
+│  ├─ Adiciona 5 entradas de Registro (startup)
+│  ├─ Cria 4 tarefas agendadas
+│  ├─ Desabilita Task Manager
+│  └─ Adiciona exclusoes do Defender
+├─ Conecta ao Discord bot (Program.py)
+└─ Conecta ao servidor central via central_client.py
+
+## 4. SERVIDOR CENTRAL (Docker - porta 5000)
+docker-compose up -d
+├─ web_api_docker.py (API REST)
+│  ├─ /api/register - Registra PC
+│  ├─ /api/heartbeat - Recebe heartbeat dos PCs
+│  ├─ /api/command - Envia comandos
+│  ├─ /api/screenshot_data - Retorna screenshot
+│  ├─ /api/execute - Executa URL
+│  ├─ /api/keylogger/* - Gerencia keylogger
+│  └─ /api/files/* - File manager
+└─ panel_docker.html (Interface web)
+   ├─ Lista de PCs online
+   ├─ Real-time updates (3s)
+   ├─ Captura screenshot
+   ├─ Execute URL
+   ├─ Keylogger
+   └─ File manager
+
+## 5. COMUNICACAO ENTRE PC REMOTO E SERVIDOR
+
+### PC Remoto (central_client.py)
+├─ Heartbeat a cada 10s
+│  └─ POST /api/heartbeat
+├─ Recebe comandos do servidor
+│  └─ GET /api/heartbeat response
+└─ Executa comando
+   └─ Screenshot, execute, keylogger, etc
+
+### Servidor (web_api_docker.py)
+├─ Recebe heartbeat
+├─ Armazena em memoria (connected_pcs)
+├─ Verifica fila de comandos
+└─ Retorna comando para PC
+
+## 6. CONTROLE VIA DISCORD BOT (Program.py)
+!help
+!screenshot - Captura tela
+!execute <cmd> - Executa comando
+!upload <arquivo> - Upload
+!download <caminho> - Download
+!input block/unblock - Bloqueia mouse/teclado
+!keylogger start/stop/logs - Controla keylogger
+
+## 7. CONTROLE VIA PAINEL WEB
+localhost:5000
+├─ Seleciona PC
+├─ Captura screenshot
+├─ Execute URL
+├─ Keylogger start/stop/logs
+├─ File manager (ls, upload, download)
+└─ Real-time sync
+
+## 8. DESFAZER ACOES (defender_rollback.bat)
+defender_rollback.bat (admin)
+├─ Remove exclusoes do Defender
+├─ Reabilita Task Manager
+├─ Remove entradas de Registro
+├─ Remove tarefas agendadas
+├─ Remove servicos
+└─ Restaura firewall
+
+## RESUMO DO FLUXO
+
+PC REMOTO (RAT.exe)
+    ↓
+    ├→ Discord Bot (Program.py)
+    │   ↓
+    │   [Recebe comandos via Discord]
+    │
+    └→ Servidor Central (Docker)
+        ↓
+        [web_api_docker.py]
+        ↓
+        [panel_docker.html - Interface Web]
+        ↓
+        [Recebe comandos via Painel]
+
+Ambas as rotas executam funcionalidades no PC remoto:
+- Screenshots
+- Comandos Windows
+- Keylogger
+- File Manager
+- Bloqueio de Input

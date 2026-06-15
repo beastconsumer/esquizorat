@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.vscode/
+logs/
+screenshots/
+data/
+dist/
+build/
+*.spec
+*.exe
+.antigravity/
+brain/
+task.md
+implementation_plan.md
+walkthrough.md

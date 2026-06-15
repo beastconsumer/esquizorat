@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Ukr Panel - Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    /* CURSOR DARK THEME */
+    :root {
+      --bg-main: #09090b;
+      --bg-card: #18181b;
+      --bg-input: #09090b;
+      --border-subtle: #27272a;
+      --border-focus: #3f3f46;
+      --text-main: #ededed;
+      --text-muted: #a1a1aa;
+      --text-dim: #52525b;
+      --accent: #ffffff;
+      --accent-text: #09090b;
+      --danger: #ef4444;
+      --success: #10b981;
+      --radius: 6px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      /* Subtle gradient for depth */
+      background: radial-gradient(circle at 50% 0%, #1c1c1f 0%, #09090b 100%);
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 380px;
+      padding: 40px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .header {
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      color: var(--text-main);
+      font-size: 13px;
+      transition: all 0.15s ease;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--text-muted);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: var(--accent-text);
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-login:hover:not(:disabled) {
+      background: #e5e5e5;
+    }
+
+    .btn-login:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .footer-info {
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .message {
+      margin-top: 16px;
+      padding: 10px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      text-align: center;
+      display: none;
+    }
+
+    .error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .success {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-container">
+    <div class="header">
+      <h1>Ukr Panel</h1>
+      <p>Please sign in to continue</p>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label>USERNAME</label>
+        <input type="text" id="username" required autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>PASSWORD</label>
+        <input type="password" id="password" required autocomplete="off">
+      </div>
+      <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
+
+      <div id="errorMsg" class="message error"></div>
+      <div id="successMsg" class="message success"></div>
+    </form>
+
+    <div class="footer-info">
+      <span>SYSTEM: ONLINE</span>
+      <span>v2.5</span>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const btn = document.getElementById('loginBtn');
+    const err = document.getElementById('errorMsg');
+    const succ = document.getElementById('successMsg');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+
+      if (!u || !p) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+      err.style.display = 'none';
+      succ.style.display = 'none';
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+
+        if (res.ok) {
+          succ.textContent = 'Access Granted';
+          succ.style.display = 'block';
+          setTimeout(() => window.location.href = '/', 600);
+        } else {
+          const data = await res.json();
+          throw new Error(data.error || 'Invalid credentials');
+        }
+      } catch (e) {
+        err.textContent = e.message;
+        err.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+
+</html>

