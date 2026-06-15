@@ -78,6 +78,7 @@ if __name__ == "__main__":
     
     token = TOKEN
     panel_url = os.environ.get('PANEL_URL', '')
+    webhook_url = os.environ.get('WEBHOOK_URL', '')
     program_py = Path(__file__).parent / 'Program.py'
     program_bak = Path(__file__).parent / 'Program.py.bak'
     
@@ -93,6 +94,10 @@ if __name__ == "__main__":
         if panel_url:
             code = code.replace('PANEL_URL_PLACEHOLDER', panel_url)
             print(f"[BUILD] Panel URL injetada: {panel_url}")
+        
+        if webhook_url:
+            code = code.replace('WEBHOOK_PLACEHOLDER', webhook_url)
+            print(f"[BUILD] Webhook URL injetada")
         
         with open(program_py, 'w', encoding='utf-8') as f:
             f.write(code)
