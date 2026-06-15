@@ -149,13 +149,20 @@ hiddenimports = ['central_client']
         self.print_header("CRIANDO ARQUIVO DE CONFIGURACAO")
         
         central_client_path = self.project_dir / "central_client.py"
+        config_json_path = self.project_dir / "config.json"
         hook_path = self.create_runtime_hook()
         
         central_client_path_str = str(central_client_path).replace("\\", "\\\\")
+        config_json_path_str = str(config_json_path).replace("\\", "\\\\")
         project_dir_str = str(self.project_dir).replace("\\", "\\\\")
         hook_path_str = str(hook_path).replace("\\", "\\\\")
         
-        datas_config = f"(r'{central_client_path_str}', '.')" if central_client_path.exists() else ""
+        datas_parts = []
+        if central_client_path.exists():
+            datas_parts.append(f"(r'{central_client_path_str}', '.')")
+        if config_json_path.exists():
+            datas_parts.append(f"(r'{config_json_path_str}', '.')")
+        datas_config = ', '.join(datas_parts)
         
         try:
             import certifi

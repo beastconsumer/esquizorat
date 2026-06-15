@@ -378,8 +378,9 @@ class CentralClient:
 
 
 if __name__ == "__main__":
+    panel_url = os.environ.get('PANEL_URL', 'http://localhost:5000')
     client = CentralClient(
-        central_server_url="http://localhost:5000",
+        central_server_url=panel_url,
         pc_name=platform.node()
     )
     
