@@ -10,6 +10,8 @@ services:
       - FLASK_ENV=production
       - API_KEY=${API_KEY:-RAT_API_2025_K7mP9sQ2xL5vB8nR3tA6cD}
       - CENTRAL_SERVER_URL=http://web-panel:5000
+      - PANEL_USER=astra
+      - PANEL_PASS=astra
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
