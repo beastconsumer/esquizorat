@@ -9,6 +9,9 @@ dist/
 build/
 *.spec
 *.exe
+*.bak
+Program_build.py
+hooks/
 .antigravity/
 brain/
 task.md

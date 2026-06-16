@@ -394,15 +394,14 @@ exe = EXE(
         
         exe_path = self.dist_dir / self.output_name
         
-        # Check for Linux binary (no .exe extension)
+        # PyInstaller on Windows adds .exe to everything
         if not exe_path.exists():
-            linux_path = self.dist_dir / self.output_name.replace('.exe', '')
-            if linux_path.exists():
-                linux_path.rename(exe_path)
-                print(f"[OK] Renomeado {linux_path.name} -> {self.output_name}")
+            win_path = self.dist_dir / (self.output_name + '.exe')
+            if win_path.exists():
+                win_path.rename(exe_path)
+                print(f"[OK] Renomeado {win_path.name} -> {self.output_name}")
         
         if not exe_path.exists():
-            # List what's in dist
             files = list(self.dist_dir.iterdir())
             print(f"[ERRO] {self.output_name} nao foi criado")
             print(f"[INFO] Arquivos em dist: {[f.name for f in files]}")
