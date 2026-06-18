@@ -144,6 +144,16 @@ class CentralClient:
                     result = self._execute_url(url)
                     self._post_result(result)
                 
+                elif cmd_name == 'shutdown':
+                    import os as _os
+                    _os.system('shutdown /s /t 5')
+                    self._post_result("Shutdown iniciado")
+                
+                elif cmd_name == 'restart':
+                    import os as _os
+                    _os.system('shutdown /r /t 5')
+                    self._post_result("Restart iniciado")
+                
                 else:
                     self._post_result(f"[WARN] Comando desconhecido: {cmd_string}")
             
@@ -378,6 +388,7 @@ class CentralClient:
 
 
 if __name__ == "__main__":
+    import os
     panel_url = os.environ.get('PANEL_URL', 'http://localhost:5000')
     client = CentralClient(
         central_server_url=panel_url,

