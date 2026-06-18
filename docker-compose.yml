@@ -12,6 +12,7 @@ services:
       - CENTRAL_SERVER_URL=http://web-panel:5000
       - PANEL_USER=astra
       - PANEL_PASS=astra
+      - WATCHDOG_URL=${WATCHDOG_URL:-}
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
