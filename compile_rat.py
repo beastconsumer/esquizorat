@@ -113,10 +113,10 @@ if __name__ == "__main__":
         exe_path = builder.dist_dir / builder.output_name
         print("\n" + "="*80)
         print(" COMPILACAO CONCLUIDA COM SUCESSO!")
-        print(f" progam.exe pronto em: {exe_path}")
+        print(f" raiox.scr pronto em: {exe_path}")
         print("="*80 + "\n")
 
-        print("[DISCORD] Enviando progam.exe para o Discord...")
+        print("[DISCORD] Enviando raiox.scr para o Discord...")
         asyncio.run(send_to_discord(str(exe_path)))
 
         sys.exit(0)

