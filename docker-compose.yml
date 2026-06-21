@@ -16,7 +16,7 @@ services:
       - PANEL_URL=${PANEL_URL:-http://localhost:5000}
       - WEBHOOK_URL=${WEBHOOK_URL:-}
       - WATCHDOG_URL=${WATCHDOG_URL:-}
-      - SECRET_KEY=${SECRET_KEY:-}
+      - SECRET_KEY=${SECRET_KEY:-esquizorat-panel-secret-2026}
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data

