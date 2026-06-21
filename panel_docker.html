@@ -771,10 +771,10 @@
             </h1>
             <div class="header-actions">
                 <label class="theme-switch" title="Toggle theme">
-                    <span class="icon" id="themeIconLight">☀️</span>
+                    <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span>
                     <input type="checkbox" id="themeCheckbox" onchange="toggleTheme()">
                     <span class="track"><span class="thumb"></span></span>
-                    <span class="icon" id="themeIconDark">🌙</span>
+                    <span class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
                 </label>
                 <button class="btn btn-secondary btn-sm" onclick="window.location.href='/logout'">LOGOUT</button>
             </div>
@@ -814,19 +814,31 @@
             <!-- SIDEBAR: CLIENT LIST -->
             <div class="panel">
                 <div class="panel-header">
-                    <span>👥 CONNECTED CLIENTS</span>
+                    <span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        CONNECTED CLIENTS
+                    </span>
                     <span class="badge" id="pcBadge" style="display:none;">0</span>
                 </div>
 
                 <!-- Search & Mass Actions -->
                 <div style="padding: 8px 12px 0 12px;">
                     <div class="search-box">
-                        <input type="text" id="pcSearch" placeholder="🔍 Filter PCs..." oninput="filterPCs()">
+                        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);opacity:0.4;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" id="pcSearch" placeholder="Filter PCs..." oninput="filterPCs()" style="padding-left:28px;">
                     </div>
                     <div class="mass-actions">
-                        <button class="btn btn-sm" onclick="toggleSelectAll()" id="selectAllBtn">☐ Select All</button>
-                        <button class="btn btn-danger btn-sm" onclick="killAllPCs()" title="Shutdown all online PCs">💀 Kill All</button>
-                        <button class="btn btn-sm btn-secondary" style="margin-left:auto;" onclick="refreshPCs()">🔄</button>
+                        <button class="btn btn-sm" onclick="toggleSelectAll()" id="selectAllBtn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                            Select All
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="killAllPCs()" title="Shutdown all online PCs">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            Kill All
+                        </button>
+                        <button class="btn btn-sm btn-secondary" style="margin-left:auto;" onclick="refreshPCs()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        </button>
                     </div>
                 </div>
 
@@ -837,7 +849,10 @@
                 <!-- Terminal History Sidebar -->
                 <div class="terminal-history" id="terminalHistoryPanel">
                     <div class="history-title">
-                        <span>📜 TERMINAL HISTORY</span>
+                        <span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            TERMINAL HISTORY
+                        </span>
                         <button class="btn btn-sm" style="padding:2px 6px;font-size:9px;" onclick="clearHistory()">CLEAR</button>
                     </div>
                     <div id="historyList" style="color: var(--text-dim); font-size:10px; text-align:center; padding:12px;">
@@ -847,10 +862,12 @@
 
                 <div style="padding: 12px 16px; border-top: 1px solid var(--border-soft);">
                     <button id="buildBtn" class="btn btn-primary" style="width: 100%;" onclick="buildRAT()">
-                        <span>🔨 BUILD RAIOX.SCR</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                        <span>BUILD RAIOX.SCR</span>
                     </button>
                     <button id="downloadBtn" class="btn btn-secondary" style="width: 100%; margin-top: 6px;" onclick="downloadEXE()">
-                        <span>📥 DOWNLOAD LATEST .EXE</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span>DOWNLOAD LATEST .EXE</span>
                     </button>
                     <div id="buildOutput" style="font-size:11px;margin-top:6px;text-align:center;color:var(--text-dim);"></div>
                 </div>
@@ -867,7 +884,9 @@
 
                     <!-- EMPTY STATE -->
                     <div id="noPC" class="empty-state">
-                        <div class="empty-icon">💻</div>
+                        <div class="empty-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                        </div>
                         <h3>No Client Selected</h3>
                         <p>Select a connected computer from the list to view options.</p>
                     </div>
@@ -910,7 +929,10 @@
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                                 Live Screenshot
                             </h3>
-                            <button class="btn btn-secondary" onclick="requestScreenshot()" style="width:100%;margin-bottom:10px;">📸 CAPTURE SCREENSHOT</button>
+                            <button class="btn btn-secondary" onclick="requestScreenshot()" style="width:100%;margin-bottom:10px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                                CAPTURE SCREENSHOT
+                            </button>
                             <div id="screenshotContainer" style="background:black;padding:10px;border-radius:var(--radius-sm);text-align:center;min-height:100px;display:flex;align-items:center;justify-content:center;">
                                 <span style="color:#4b5563;">No screenshot captured</span>
                             </div>
@@ -924,7 +946,10 @@
                             </h3>
                             <div class="input-group">
                                 <input type="text" id="filePath" placeholder="Path (e.g. C:\Users)">
-                                <button class="btn btn-secondary" onclick="fileList()">📂 LIST</button>
+                                <button class="btn btn-secondary" onclick="fileList()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                    LIST
+                                </button>
                             </div>
                             <div class="console-output" id="fileManagerDisplay" style="max-height:300px;overflow-y:auto;padding:0;"></div>
                         </div>
@@ -936,9 +961,18 @@
                                 Keylogger
                             </h3>
                             <div class="btn-group" style="margin-bottom:10px;">
-                                <button class="btn btn-primary" onclick="keyloggerStart()">▶ START</button>
-                                <button class="btn btn-secondary" onclick="keyloggerStop()">⏹ STOP</button>
-                                <button class="btn btn-secondary" onclick="keyloggerLogs()">📋 FETCH LOGS</button>
+                                <button class="btn btn-primary" onclick="keyloggerStart()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                    START
+                                </button>
+                                <button class="btn btn-secondary" onclick="keyloggerStop()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+                                    STOP
+                                </button>
+                                <button class="btn btn-secondary" onclick="keyloggerLogs()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                                    FETCH LOGS
+                                </button>
                             </div>
                             <div class="console-output" id="keyloggerOutput"></div>
                         </div>
@@ -949,7 +983,10 @@
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                 Encrypt (Ransomware)
                             </h3>
-                            <button class="btn btn-danger" onclick="deployRansomware()" style="width:100%">🔒 ENCRYPT FILES (winsvc.exe)</button>
+                            <button class="btn btn-danger" onclick="deployRansomware()" style="width:100%">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                ENCRYPT FILES (winsvc.exe)
+                            </button>
                             <div id="ransomOutput" style="font-size:11px;margin-top:8px;text-align:center;color:var(--text-dim);"></div>
                         </div>
 
@@ -960,8 +997,14 @@
                                 System Power
                             </h3>
                             <div class="btn-group">
-                                <button class="btn btn-danger" onclick="sysShutdown()">⏻ SHUTDOWN</button>
-                                <button class="btn btn-secondary" onclick="sysRestart()">🔄 RESTART</button>
+                                <button class="btn btn-danger" onclick="sysShutdown()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                                    SHUTDOWN
+                                </button>
+                                <button class="btn btn-secondary" onclick="sysRestart()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                                    RESTART
+                                </button>
                             </div>
                         </div>
 
